@@ -1,0 +1,7 @@
+# Die Buchungs-API und der Admin-Bereich sollen nicht von Suchmaschinen
+# gecrawlt werden - das spart unnötigen Traffic (und damit Kosten) und
+# verhindert, dass diese Bereiche in Suchergebnissen auftauchen.
+User-agent: *
+Disallow: /admin
+Disallow: /api/
+Allow: /

@@ -1,0 +1,78 @@
+.hero {
+  position: relative;
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-9) 0;
+  background-image: linear-gradient(
+      rgba(250, 247, 242, 0.88),
+      rgba(250, 247, 242, 0.93)
+    ),
+    url('/osterweg-flyer-1.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hero__content {
+  text-align: center;
+  max-width: 640px;
+}
+
+.hero__date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: var(--space-4);
+}
+
+.hero__intro {
+  font-size: 19px;
+  color: var(--text-muted);
+  margin: var(--space-4) auto var(--space-6);
+  max-width: 520px;
+}
+
+.hero .btn {
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px rgba(168, 80, 46, 0.22);
+}
+
+.hero .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(168, 80, 46, 0.28);
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 72px 0;
+  }
+
+  .hero__date {
+    font-size: 13px;
+    margin-bottom: var(--space-3);
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    line-height: 1.05;
+    max-width: 290px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero__intro {
+    font-size: 18px;
+    max-width: 330px;
+    margin: var(--space-3) auto var(--space-5);
+  }
+
+  .hero .btn {
+    width: 250px;
+    max-width: 100%;
+    padding: 0 24px;
+    height: 52px;
+    min-height: 52px;
+    border-radius: 11px;
+  }
+}

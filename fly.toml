@@ -1,0 +1,33 @@
+# fly.toml app configuration file generated for osterweg-wyland on 2026-08-07T08:22:52+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'osterweg-wyland'
+primary_region = 'fra'
+
+[build]
+[env]
+  DB_PATH = '/data/data.db'
+  NODE_ENV = 'production'
+  PORT = '4001'
+  # Muss auf die echte Domain der Seite zeigen (z.B. https://osterweg-wyland.fly.dev
+  # oder eine eigene Domain), damit CORS in Produktion korrekt funktioniert.
+  CLIENT_ORIGIN = 'https://osterweg-wyland.fly.dev'
+  MAIL_FROM = 'Osterweg Wyland <onboarding@resend.dev>'
+
+[[mounts]]
+  source = 'osterweg_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 4001
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

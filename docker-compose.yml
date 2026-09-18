@@ -1,0 +1,36 @@
+# ============================================================================
+# Docker Compose für die Osterweg-Wyland Webseite + Buchungs-Backend.
+#
+# Start:            docker compose up -d --build
+# Logs ansehen:      docker compose logs -f
+# Stoppen:          docker compose down
+#
+# Erst-Admin-Zugang anlegen: entweder ADMIN_USERNAME/ADMIN_PASSWORD unten in
+# der .env-Datei setzen (wird beim allerersten Start automatisch angelegt),
+# oder danach manuell:
+#   docker compose exec app node server/db/seedAdmin.js <benutzername> <passwort>
+# ============================================================================
+services:
+  app:
+    build: .
+    image: osterweg-wyland:latest
+    restart: unless-stopped
+    ports:
+      - '${APP_PORT:-4001}:4001'
+    environment:
+      PORT: 4001
+      NODE_ENV: production
+      # Wird nur beim allerersten Start verwendet (wenn noch kein Admin existiert).
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # WICHTIG: In Produktion unbedingt einen eigenen, langen Zufallswert setzen!
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-in-.env}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:4001}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-Osterweg Wyland <onboarding@resend.dev>}
+      NOTIFY_EMAIL: ${NOTIFY_EMAIL:-}
+    volumes:
+      - osterweg_data:/app/server/data
+
+volumes:
+  osterweg_data:
