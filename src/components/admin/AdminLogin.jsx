@@ -24,8 +24,8 @@ function AdminLogin({ onLogin }) {
   return (
     <div className="admin-login">
       <form className="admin-login__form card" onSubmit={handleSubmit}>
-        <h2>Admin-Login</h2>
-        <p>Osterweg Wyland - Verwaltung</p>
+        <h2>Willkommen zurück</h2>
+        <p>Melde dich an, um die Anmeldungen für den Osterweg zu verwalten.</p>
 
         <label>
           Benutzername
@@ -33,6 +33,8 @@ function AdminLogin({ onLogin }) {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            autoFocus
             required
           />
         </label>
@@ -43,6 +45,7 @@ function AdminLogin({ onLogin }) {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
             required
           />
         </label>

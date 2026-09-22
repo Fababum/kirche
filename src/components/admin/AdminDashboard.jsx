@@ -1,12 +1,7 @@
-import { useState } from 'react';
 import { api } from '../../api';
-import AdminTours from './AdminTours';
-import AdminBookings from './AdminBookings';
+import AdminSchedule from './AdminSchedule';
 
 function AdminDashboard({ username, onLogout }) {
-  const [tab, setTab] = useState('bookings');
-  const [newBookingsCount, setNewBookingsCount] = useState(0);
-
   async function handleLogout() {
     await api.logout();
     onLogout();
@@ -16,8 +11,11 @@ function AdminDashboard({ username, onLogout }) {
     <div className="admin-dashboard">
       <header className="admin-dashboard__header">
         <div>
-          <h2>Verwaltung Osterweg Wyland</h2>
-          <p>Angemeldet als {username}</p>
+          <h2>Willkommen, {username}!</h2>
+          <p>
+            Hier siehst du alle Führungen und wer sich dafür angemeldet hat - klicke auf eine
+            Führung, um die Reservationen zu sehen.
+          </p>
         </div>
         <div className="admin-dashboard__actions">
           <a href="/" className="btn btn--outline">
@@ -29,29 +27,8 @@ function AdminDashboard({ username, onLogout }) {
         </div>
       </header>
 
-      <nav className="admin-dashboard__tabs">
-        <button
-          type="button"
-          className={tab === 'bookings' ? 'active' : ''}
-          onClick={() => setTab('bookings')}
-        >
-          Reservationen{newBookingsCount > 0 ? ` (${newBookingsCount} neu)` : ''}
-        </button>
-        <button
-          type="button"
-          className={tab === 'tours' ? 'active' : ''}
-          onClick={() => setTab('tours')}
-        >
-          Führungs-Slots
-        </button>
-      </nav>
-
       <div className="admin-dashboard__content">
-        {tab === 'bookings' ? (
-          <AdminBookings onNewCountChange={setNewBookingsCount} />
-        ) : (
-          <AdminTours />
-        )}
+        <AdminSchedule />
       </div>
     </div>
   );

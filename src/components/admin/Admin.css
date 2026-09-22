@@ -75,6 +75,8 @@
   max-width: 1080px;
   margin: 0 auto;
   padding: 32px 24px 64px;
+  background: var(--bg);
+  min-height: 100svh;
 }
 
 .admin-dashboard__header {
@@ -89,6 +91,7 @@
 .admin-dashboard__header p {
   color: var(--text-muted);
   margin: 0;
+  font-size: 15px;
 }
 
 .admin-dashboard__actions {
@@ -99,28 +102,45 @@
 .admin-dashboard__tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .admin-dashboard__tabs button {
-  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
   border: none;
   background: none;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 16px;
   color: var(--text-muted);
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   white-space: nowrap;
-  min-height: 44px;
+  min-height: 48px;
+}
+
+.admin-dashboard__tab-icon {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .admin-dashboard__tabs button.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+}
+
+.admin-dashboard__hint {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
 }
 
 /* ---------- Kennzahlen-Kacheln ---------- */
@@ -169,6 +189,12 @@
 
 .admin-tours__new {
   margin-bottom: 24px;
+}
+
+.admin-tours__new-hint {
+  color: var(--text-muted);
+  font-size: 14.5px;
+  margin: 4px 0 16px;
 }
 
 .admin-tours__new-row {
@@ -594,5 +620,173 @@
 @media (max-width: 420px) {
   .admin-stats {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================================================
+   Zusammengeführte Führungen + Reservationen (AdminSchedule)
+   ============================================================================ */
+
+.admin-schedule__new {
+  margin-bottom: var(--space-4);
+}
+
+.admin-schedule__new-btn {
+  width: 100%;
+  border-style: dashed;
+}
+
+.admin-schedule__new-form {
+  margin: 0;
+}
+
+.admin-schedule__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.admin-schedule__item {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-schedule__item--cancelled {
+  opacity: 0.6;
+}
+
+.admin-schedule__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  min-height: 56px;
+}
+
+.admin-schedule__chevron {
+  color: var(--text-muted);
+  font-size: 14px;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.admin-schedule__date {
+  font-weight: 700;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.admin-schedule__time {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.admin-schedule__count {
+  font-weight: 600;
+  color: var(--text-h);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.admin-schedule__details {
+  padding: 0 var(--space-5) var(--space-5);
+  border-top: 1px solid var(--border-soft);
+}
+
+.admin-schedule__tour-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-4) 0;
+}
+
+.admin-schedule__capacity-label {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-empty--compact {
+  padding: var(--space-4);
+  margin: 0;
+}
+
+.admin-schedule__bookings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-schedule__booking {
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+}
+
+.admin-schedule__booking--cancelled {
+  opacity: 0.55;
+}
+
+.admin-schedule__booking-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.admin-schedule__booking-size {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.admin-schedule__booking-contact {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.admin-schedule__booking-note {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0 0 8px;
+}
+
+.admin-schedule__booking-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 700px) {
+  .admin-schedule__header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .admin-schedule__count {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .admin-schedule__booking-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-schedule__booking-size {
+    margin-left: 0;
   }
 }
