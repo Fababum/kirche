@@ -57,6 +57,16 @@
   color: var(--accent);
 }
 
+.info-section__icon--coral {
+  background: var(--coral-soft);
+  color: var(--coral-hover);
+}
+
+.info-section__icon--gold {
+  background: var(--gold-soft);
+  color: var(--gold-hover);
+}
+
 .info-section__icon svg {
   width: 19px;
   height: 19px;

@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -23,7 +24,13 @@ runStartupSetup();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 4001;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+// Erlaubt mehrere gültige Domains, z.B. mit/ohne "www." und die alte
+// *.fly.dev-Adresse als Fallback - einfach kommagetrennt in der Env-Variable
+// angeben (siehe fly.toml).
+const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 // Im Docker-Image liegt das fertige Frontend-Build unter /app/dist.
 const STATIC_DIR = path.join(__dirname, '..', 'dist');
 const serveFrontend = fs.existsSync(STATIC_DIR);
@@ -35,11 +42,26 @@ app.use(
     // Inline-Styles/Skripte des Vite-Builds nicht zu blockieren.
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    // Helmet setzt standardmässig "no-referrer" - das blockiert aber auch
+    // legitime Drittanbieter-Anfragen wie die Kartenkacheln (MapTiler prüft
+    // den Referrer, um den API-Key domain-beschränkt zu validieren). Mit
+    // "strict-origin-when-cross-origin" (dem normalen Browser-Standard)
+    // wird bei fremden Domains nur die eigene Herkunft (Domain, kein
+    // Pfad/Query) übermittelt - guter Kompromiss aus Datenschutz und
+    // Funktionalität.
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   })
 );
 app.use(
   cors({
-    origin: CLIENT_ORIGIN,
+    origin(origin, callback) {
+      // Anfragen ohne Origin-Header (z.B. curl, Server-zu-Server) erlauben.
+      if (!origin || CLIENT_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Nicht erlaubte Herkunft (CORS): ' + origin));
+      }
+    },
     credentials: true,
   })
 );
@@ -48,6 +70,19 @@ app.use(
 app.use(compression());
 app.use(express.json());
 app.use(cookieParser());
+
+// Grober Schutz vor Bots/Scrapern, die wiederholt Seiten oder Bilder abrufen
+// und so unnötig Bandbreite (= Kosten) verursachen könnten. Grosszügig genug
+// bemessen, um echte Besucher:innen nie zu beeinträchtigen (Buchungs- und
+// Login-Formulare haben zusätzlich eigene, strengere Rate-Limits).
+const globalRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Zu viele Anfragen. Bitte kurz warten und erneut versuchen.' },
+});
+app.use(globalRateLimiter);
 
 // Suchmaschinen sollen API und Admin-Bereich nicht crawlen/indexieren
 // (spart unnötigen Traffic und verhindert Indexierung sensibler Bereiche).

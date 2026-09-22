@@ -23,11 +23,11 @@ function Header({ minimal = false }) {
           aria-label={eventInfo.title}
         >
           <img
-            src="/downloads/weinland_mitte_zusatz_negativ_600dpi.png"
+            src="/images/logo.png"
             alt={eventInfo.title}
             className="site-header__logo-img"
-            width="220"
-            height="61"
+            width="595"
+            height="207"
           />
         </a>
 

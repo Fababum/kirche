@@ -1,8 +1,18 @@
 /* ============================================================================
    Design-System - Osterweg Wyland
-   Bewusst reduziert: eine Akzentfarbe, flache Flächen, ruhige Typografie.
-   Mobile-first mit klaren Tokens für Abstand, Radius und Typografie.
+   Warme Oster-Palette direkt aus den Flyer-/Plakat-Grafiken abgeleitet
+   (Terrakotta, Koralle, Gold) mit einer charaktervollen Überschriften-
+   Schrift, die zum handgezeichneten Illustrations-Stil passt. Mobile-first
+   mit klaren Tokens für Abstand, Radius und Typografie.
    ============================================================================ */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/fonts/fraunces-variable.woff2') format('woff2');
+}
 
 :root {
   /* Farben */
@@ -20,10 +30,32 @@
   --accent-hover: #8a3f22;
   --accent-soft: #f3e4dc;
 
+  /* Koralle - direkt aus dem Osterweg-Banner abgetastet (der warme
+     Orange-Rot-Ton im Himmel der Illustration). */
+  --coral: #d9552f;
+  --coral-hover: #b8431f;
+  --coral-soft: #fbe4d8;
+
+  /* Gold - aus den Sonnenstrahlen der Illustrationen abgetastet. */
+  --gold: #dba53a;
+  --gold-hover: #b6851f;
+  --gold-soft: #faf0d9;
+
+  /* Weiche, mehrfarbige Verläufe für Section-Hintergründe - abgeleitet aus
+     der Himmel-/Sonnenstrahlen-Farbpalette der Flyer-Grafiken, aber stark
+     aufgehellt, damit Text/Karten weiterhin gut lesbar bleiben. */
+  --gradient-warm-a:
+    radial-gradient(circle at 12% 15%, rgba(255, 255, 255, 0.65), transparent 45%),
+    linear-gradient(135deg, #fdeedc 0%, #fbdfc0 45%, #f6cda0 100%);
+  --gradient-warm-b:
+    radial-gradient(circle at 88% 12%, rgba(255, 255, 255, 0.6), transparent 45%),
+    linear-gradient(150deg, #fff8e6 0%, #fdecc4 55%, #f8dba4 100%);
+
   --status-ok: #4c8c5a;
 
   --shadow-sm: 0 1px 2px rgba(38, 34, 32, 0.06);
-  --shadow-md: 0 2px 10px rgba(38, 34, 32, 0.08);
+  --shadow-md: 0 4px 16px rgba(38, 34, 32, 0.1);
+  --shadow-lg: 0 12px 32px rgba(38, 34, 32, 0.14);
 
   /* Abstand-Skala (4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 80) */
   --space-1: 4px;
@@ -37,15 +69,16 @@
   --space-9: 80px;
 
   /* Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
 
   /* Layout */
   --content-width: 1080px;
   --page-padding: 24px;
 
   --font: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
 
   font: 17px/1.6 var(--font);
   color-scheme: light;
@@ -73,26 +106,29 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font);
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-weight: 600;
   color: var(--text-h);
   margin: 0 0 var(--space-3);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 h1 {
-  font-size: clamp(2.35rem, 8vw, 2.75rem);
-  line-height: 1.08;
+  font-size: clamp(2.5rem, 8vw, 3.1rem);
+  line-height: 1.06;
+  font-weight: 600;
+  font-style: italic;
 }
 
 h2 {
-  font-size: 30px;
-  line-height: 1.2;
+  font-size: 32px;
+  line-height: 1.18;
 }
 
 h3 {
-  font-size: 21px;
+  font-size: 22px;
   line-height: 1.3;
+  font-weight: 600;
 }
 
 p {
@@ -117,7 +153,15 @@ a {
 }
 
 .section--alt {
-  background: var(--bg-alt);
+  background: linear-gradient(180deg, var(--bg-alt) 0%, #ecdfc8 100%);
+}
+
+.section--warm {
+  background: var(--gradient-warm-a);
+}
+
+.section--gold {
+  background: var(--gradient-warm-b);
 }
 
 .section-heading {
@@ -133,6 +177,27 @@ a {
   margin-right: auto;
 }
 
+/* Kleine dekorative Unterstreichung unter Section-Überschriften - ein
+   verspielter, handgezeichnet wirkender Farbstrich statt einer nackten
+   Linie. */
+.section-heading h2 {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 14px;
+}
+
+.section-heading h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -146,8 +211,9 @@ a {
   cursor: pointer;
   text-decoration: none;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease, box-shadow 0.15s ease;
   min-height: 48px;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn--primary {
@@ -157,12 +223,37 @@ a {
 
 .btn--primary:hover {
   background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn--coral {
+  background: var(--coral);
+  color: #fff;
+}
+
+.btn--coral:hover {
+  background: var(--coral-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn--gold {
+  background: var(--gold);
+  color: #fff;
+}
+
+.btn--gold:hover {
+  background: var(--gold-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn--outline {
   background: transparent;
   color: var(--text-h);
   border-color: var(--border);
+  box-shadow: none;
 }
 
 .btn--outline:hover {
@@ -194,6 +285,12 @@ summary:focus-visible {
   border-radius: var(--radius-md);
   padding: var(--space-5);
   box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .badge {
@@ -206,6 +303,18 @@ summary:focus-visible {
   font-weight: 600;
   border: 1px solid var(--border);
   line-height: 1.6;
+}
+
+.badge--coral {
+  background: var(--coral-soft);
+  color: var(--coral-hover);
+  border-color: #d3e5c8;
+}
+
+.badge--gold {
+  background: var(--gold-soft);
+  color: var(--gold-hover);
+  border-color: #eeddb0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -225,7 +334,7 @@ summary:focus-visible {
     padding: var(--space-7) 0;
   }
   h2 {
-    font-size: 27px;
+    font-size: 28px;
   }
 }
 
@@ -238,10 +347,10 @@ summary:focus-visible {
     margin-bottom: var(--space-5);
   }
   h2 {
-    font-size: 28px;
+    font-size: 27px;
   }
   h3 {
-    font-size: 19px;
+    font-size: 20px;
   }
   p {
     font-size: 16.5px;

@@ -1,6 +1,5 @@
 .hero {
   position: relative;
-  border-bottom: 1px solid var(--border);
   padding: var(--space-9) 0;
   background-image: linear-gradient(
       rgba(250, 247, 242, 0.94) 0%,

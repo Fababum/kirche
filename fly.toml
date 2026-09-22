@@ -7,13 +7,18 @@ app = 'osterweg-wyland'
 primary_region = 'fra'
 
 [build]
+  # MapTiler-Key für die Standortkarte - per "Allowed HTTP Origins" beim
+  # Anbieter auf unsere Domain(s) beschränkt, daher als Build-Arg (nicht als
+  # Laufzeit-Secret) unbedenklich hier hinterlegt.
+  [build.args]
+    VITE_MAPTILER_KEY = 'pS9FckFHnk2270UG42Uc'
 [env]
   DB_PATH = '/data/data.db'
   NODE_ENV = 'production'
   PORT = '4001'
-  # Muss auf die echte Domain der Seite zeigen (z.B. https://osterweg-wyland.fly.dev
-  # oder eine eigene Domain), damit CORS in Produktion korrekt funktioniert.
-  CLIENT_ORIGIN = 'https://osterweg-wyland.fly.dev'
+  # Muss auf die echte(n) Domain(s) der Seite zeigen, damit CORS in
+  # Produktion korrekt funktioniert. Mehrere Domains kommagetrennt möglich.
+  CLIENT_ORIGIN = 'https://osterweg-wyland.com,https://www.osterweg-wyland.com,https://osterweg-wyland.fly.dev'
   MAIL_FROM = 'Osterweg Wyland <onboarding@resend.dev>'
 
 [[mounts]]

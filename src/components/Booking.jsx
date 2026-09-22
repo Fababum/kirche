@@ -110,7 +110,7 @@ function Booking() {
   }
 
   return (
-    <section id="reservieren" className="section booking">
+    <section id="reservieren" className="section section--warm booking">
       <div className="container">
         <div className="section-heading">
           <h2>{registrationInfo.heading}</h2>

@@ -18,6 +18,13 @@ RUN apt-get update \
 COPY package*.json ./
 RUN npm ci
 
+# MapTiler-Kartenkey wird zur Build-Zeit ins Frontend eingebacken (kein
+# Server-Geheimnis - der Key ist per "Allowed HTTP Origins" auf unsere
+# Domain beschränkt, daher unbedenklich im Client-Bundle). Wird über
+# fly.toml ([build.args]) bzw. "docker build --build-arg" gesetzt.
+ARG VITE_MAPTILER_KEY=""
+ENV VITE_MAPTILER_KEY=$VITE_MAPTILER_KEY
+
 COPY . .
 RUN npm run build
 

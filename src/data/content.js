@@ -151,7 +151,8 @@ export const volunteerAreas = [
 
 export const downloadSection = {
   heading: "Werbematerial",
-  text: "Flyer und Plakate zum Herunterladen.",
+  title: "Flyer herunterladen",
+  text: "Flyer, Plakat und Banner zum Weitergeben und Aufhängen.",
   linkHref: "/downloads/osterweg-wyland-flyer.zip",
   linkLabel: "Flyer herunterladen",
 };

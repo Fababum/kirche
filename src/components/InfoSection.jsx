@@ -2,9 +2,10 @@ import { tourInfo, costsInfo, travelInfo, secretariat, kafi, eventInfo } from '.
 import LocationMap from './LocationMap';
 import './InfoSection.css';
 
-// Koordinaten der Kirche Truttikon (Dorfzentrum, Hauptstrasse).
-const CHURCH_LAT = 47.629074;
-const CHURCH_LON = 8.727178;
+// Koordinaten der reformierten Kirche Truttikon (Gebäude, nicht nur
+// Strassenmittelpunkt) - via OpenStreetMap/Nominatim ermittelt.
+const CHURCH_LAT = 47.6301075;
+const CHURCH_LON = 8.7263536;
 
 const ICON_PROPS = {
   viewBox: '0 0 24 24',
@@ -62,11 +63,13 @@ function IconPhone() {
   );
 }
 
-function ScheduleCard({ icon, title, rows }) {
+function ScheduleCard({ icon, title, rows, tone }) {
   return (
     <div className="card info-section__card">
       <div className="info-section__card-head">
-        <span className="info-section__icon">{icon}</span>
+        <span className={`info-section__icon${tone ? ` info-section__icon--${tone}` : ''}`}>
+          {icon}
+        </span>
         <h3>{title}</h3>
       </div>
       <div className="info-section__rows">
@@ -82,11 +85,13 @@ function ScheduleCard({ icon, title, rows }) {
   );
 }
 
-function FactCard({ icon, title, children }) {
+function FactCard({ icon, title, tone, children }) {
   return (
     <div className="card info-section__card">
       <div className="info-section__card-head">
-        <span className="info-section__icon">{icon}</span>
+        <span className={`info-section__icon${tone ? ` info-section__icon--${tone}` : ''}`}>
+          {icon}
+        </span>
         <h3>{title}</h3>
       </div>
       <p className="info-section__fact-text">{children}</p>
@@ -103,16 +108,21 @@ function InfoSection() {
         </div>
 
         <div className="info-section__schedules">
-          <ScheduleCard icon={<IconClock />} title={tourInfo.heading} rows={tourInfo.schedule} />
-          <ScheduleCard icon={<IconCup />} title={kafi.name} rows={kafi.hours} />
+          <ScheduleCard
+            icon={<IconClock />}
+            title={tourInfo.heading}
+            rows={tourInfo.schedule}
+            tone="accent"
+          />
+          <ScheduleCard icon={<IconCup />} title={kafi.name} rows={kafi.hours} tone="gold" />
         </div>
 
         <div className="info-section__facts">
-          <FactCard icon={<IconCoin />} title={costsInfo.heading}>
+          <FactCard icon={<IconCoin />} title={costsInfo.heading} tone="coral">
             {costsInfo.text}
           </FactCard>
 
-          <FactCard icon={<IconPin />} title={travelInfo.heading}>
+          <FactCard icon={<IconPin />} title={travelInfo.heading} tone="accent">
             {travelInfo.text}
             {travelInfo.publicTransport && (
               <>
@@ -122,7 +132,7 @@ function InfoSection() {
             )}
           </FactCard>
 
-          <FactCard icon={<IconPhone />} title={secretariat.heading}>
+          <FactCard icon={<IconPhone />} title={secretariat.heading} tone="gold">
             {secretariat.name}
             <br />
             <a href={`tel:${secretariat.phone.replace(/\s/g, '')}`}>{secretariat.phone}</a>
@@ -131,7 +141,7 @@ function InfoSection() {
 
         <div className="info-section__map card">
           <h3 className="info-section__map-title">
-            <span className="info-section__icon">
+            <span className="info-section__icon info-section__icon--coral">
               <IconPin />
             </span>
             {eventInfo.location.name}, {eventInfo.location.street}, {eventInfo.location.zipCity}

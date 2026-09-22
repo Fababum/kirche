@@ -2,7 +2,9 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Hero from './components/Hero';
+import SectionWave from './components/SectionWave';
 import Booking from './components/Booking';
+import FlyerBanner from './components/FlyerBanner';
 import InfoSection from './components/InfoSection';
 import QuoteBanner from './components/QuoteBanner';
 import Volunteer from './components/Volunteer';
@@ -22,10 +24,13 @@ function HomePage() {
       <Header />
       <main>
         <Hero />
+        <SectionWave fill="#fbe0c2" />
         <Booking />
+        <FlyerBanner />
         <InfoSection />
         <QuoteBanner />
         <Volunteer />
+        <SectionWave fill="#faf7f2" />
         <TeamContacts />
       </main>
       <Footer />

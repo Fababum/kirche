@@ -5,7 +5,7 @@ const HAS_DIGIT = /\d/;
 
 function Volunteer() {
   return (
-    <section id="mitarbeiten" className="section volunteer">
+    <section id="mitarbeiten" className="section section--gold volunteer">
       <div className="container">
         <div className="section-heading">
           <h2>Mitmachen</h2>

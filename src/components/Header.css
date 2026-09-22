@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  height: 68px;
+  height: 84px;
 }
 
 .site-header__logo {
@@ -24,11 +24,8 @@
 
 .site-header__logo-img {
   display: block;
-  height: 34px;
+  height: 58px;
   width: auto;
-  /* Logo-Datei ist eine helle "Negativ"-Version fürs dunkle Design;
-     hier auf den Kopfzeilen-Hintergrund umgekehrt, damit sie dunkel erscheint. */
-  filter: invert(1) brightness(0.85);
 }
 
 .site-header__nav--desktop {
@@ -152,10 +149,10 @@
 
 @media (max-width: 800px) {
   .site-header__inner {
-    height: 70px;
+    height: 78px;
   }
   .site-header__logo-img {
-    height: 28px;
+    height: 46px;
   }
   .site-header__nav--desktop {
     display: none;
