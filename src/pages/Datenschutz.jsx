@@ -11,7 +11,7 @@ function Datenschutz() {
 
   return (
     <>
-      <Header />
+      <Header minimal />
       <main>
         <section className="section legal-page">
           <div className="container legal-page__content">
@@ -72,19 +72,23 @@ function Datenschutz() {
               deine Daten nicht an Dritte weiter und verkaufen sie nicht.
             </p>
             <p>
-              Für die Standortkarte bei den Informationen zur Führung laden wir Kartenausschnitte
-              direkt von den Servern der{' '}
+              Für die Standortkarte bei den Informationen zur Führung laden wir
+              Kartenausschnitte von{' '}
+              <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">
+                CARTO
+              </a>{' '}
+              auf Basis von Kartendaten der{' '}
               <a
                 href="https://wiki.osmfoundation.org/wiki/Privacy_Policy"
                 target="_blank"
                 rel="noreferrer"
               >
                 OpenStreetMap Foundation
-              </a>{' '}
-              (Grossbritannien/EU). Dabei wird deine IP-Adresse technisch bedingt an diesen
-              Anbieter übermittelt, so wie beim Laden jeder externen Bildquelle. Es werden dabei
-              keine Cookies gesetzt und keine Standortdaten von dir abgefragt - nur die
-              Kartenansicht der Region wird geladen.
+              </a>
+              . Dabei wird deine IP-Adresse technisch bedingt an diese Anbieter übermittelt, so
+              wie beim Laden jeder externen Bildquelle. Es werden dabei keine Cookies gesetzt und
+              keine Standortdaten von dir abgefragt - nur die Kartenansicht der Region wird
+              geladen.
             </p>
 
             <h2>Cookies & Tracking</h2>

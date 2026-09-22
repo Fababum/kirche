@@ -5,10 +5,11 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import './LocationMap.css';
 
-// Eigene, schlanke Kartenkomponente (statt iframe von openstreetmap.org) -
-// dadurch zeigen wir NUR die rechtlich vorgeschriebene Attribution
-// ("© OpenStreetMap Mitwirkende", Pflicht laut ODbL-Lizenz) und nicht die
-// zusätzlichen Werbe-/Spenden-Links der kompletten Embed-Seite.
+// Eigene, schlanke Kartenkomponente. Nutzt die CARTO-Basemaps (kostenlos,
+// explizit für den produktiven Einsatz gedacht - im Gegensatz zum
+// öffentlichen tile.openstreetmap.org-Server, der solche Nutzung sperrt,
+// siehe https://operations.osmfoundation.org/policies/tiles/). Kartendaten
+// bleiben OpenStreetMap, nur die Kacheln werden von CARTO ausgeliefert.
 function LocationMap({ lat, lon, label }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -35,7 +36,8 @@ function LocationMap({ lat, lon, label }) {
         attributionControl: false,
       });
 
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(map);
 
@@ -43,7 +45,7 @@ function LocationMap({ lat, lon, label }) {
       L.control
         .attribution({ prefix: false })
         .addAttribution(
-          '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> Mitwirkende'
+          '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> Mitwirkende · © <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
         )
         .addTo(map);
 

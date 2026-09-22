@@ -11,7 +11,7 @@ function Impressum() {
 
   return (
     <>
-      <Header />
+      <Header minimal />
       <main>
         <section className="section legal-page">
           <div className="container legal-page__content">

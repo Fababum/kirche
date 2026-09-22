@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { eventInfo, navLinks } from '../data/content';
 import './Header.css';
 
-function Header() {
+// `minimal`: wird auf Unterseiten (Impressum, Datenschutz) verwendet, die
+// keine der Anker-Sections der Startseite (#reservieren, #informationen, ...)
+// besitzen. Zeigt dann nur das Logo (verlinkt zurück zur Startseite) ohne
+// die sonst ins Leere laufende Navigation.
+function Header({ minimal = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleNavClick() {
@@ -13,7 +17,7 @@ function Header() {
     <header className="site-header">
       <div className="container site-header__inner">
         <a
-          href="#top"
+          href={minimal ? '/' : '#top'}
           className="site-header__logo"
           onClick={handleNavClick}
           aria-label={eventInfo.title}
@@ -27,53 +31,59 @@ function Header() {
           />
         </a>
 
-        <nav className="site-header__nav site-header__nav--desktop">
-          {navLinks.map((link) => (
-            <a key={link.href} href={link.href}>
-              {link.label}
+        {!minimal && (
+          <>
+            <nav className="site-header__nav site-header__nav--desktop">
+              {navLinks.map((link) => (
+                <a key={link.href} href={link.href}>
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+
+            <a href="#reservieren" className="btn btn--primary site-header__cta">
+              Anmelden
             </a>
-          ))}
-        </nav>
 
-        <a href="#reservieren" className="btn btn--primary site-header__cta">
-          Anmelden
-        </a>
-
-        <button
-          type="button"
-          className={`site-header__burger ${menuOpen ? 'site-header__burger--open' : ''}`}
-          aria-label={menuOpen ? 'Menü schliessen' : 'Menü öffnen'}
-          aria-expanded={menuOpen}
-          aria-controls="site-mobile-nav"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+            <button
+              type="button"
+              className={`site-header__burger ${menuOpen ? 'site-header__burger--open' : ''}`}
+              aria-label={menuOpen ? 'Menü schliessen' : 'Menü öffnen'}
+              aria-expanded={menuOpen}
+              aria-controls="site-mobile-nav"
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          </>
+        )}
       </div>
 
-      <nav
-        id="site-mobile-nav"
-        className={`site-header__nav--mobile ${menuOpen ? 'site-header__nav--mobile-open' : ''}`}
-        aria-hidden={!menuOpen}
-        onClick={handleNavClick}
-      >
-        {navLinks
-          .filter((link) => link.href !== '#reservieren')
-          .map((link) => (
-            <a key={link.href} href={link.href} tabIndex={menuOpen ? 0 : -1}>
-              {link.label}
-            </a>
-          ))}
-        <a
-          href="#reservieren"
-          className="btn btn--primary site-header__mobile-cta"
-          tabIndex={menuOpen ? 0 : -1}
+      {!minimal && (
+        <nav
+          id="site-mobile-nav"
+          className={`site-header__nav--mobile ${menuOpen ? 'site-header__nav--mobile-open' : ''}`}
+          aria-hidden={!menuOpen}
+          onClick={handleNavClick}
         >
-          Anmelden
-        </a>
-      </nav>
+          {navLinks
+            .filter((link) => link.href !== '#reservieren')
+            .map((link) => (
+              <a key={link.href} href={link.href} tabIndex={menuOpen ? 0 : -1}>
+                {link.label}
+              </a>
+            ))}
+          <a
+            href="#reservieren"
+            className="btn btn--primary site-header__mobile-cta"
+            tabIndex={menuOpen ? 0 : -1}
+          >
+            Anmelden
+          </a>
+        </nav>
+      )}
     </header>
   );
 }
