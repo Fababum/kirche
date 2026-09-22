@@ -1,5 +1,10 @@
-import { tourInfo, costsInfo, travelInfo, secretariat, kafi } from '../data/content';
+import { tourInfo, costsInfo, travelInfo, secretariat, kafi, eventInfo } from '../data/content';
+import LocationMap from './LocationMap';
 import './InfoSection.css';
+
+// Koordinaten der Kirche Truttikon (Dorfzentrum, Hauptstrasse).
+const CHURCH_LAT = 47.629074;
+const CHURCH_LON = 8.727178;
 
 const ICON_PROPS = {
   viewBox: '0 0 24 24',
@@ -109,6 +114,12 @@ function InfoSection() {
 
           <FactCard icon={<IconPin />} title={travelInfo.heading}>
             {travelInfo.text}
+            {travelInfo.publicTransport && (
+              <>
+                <br />
+                {travelInfo.publicTransport}
+              </>
+            )}
           </FactCard>
 
           <FactCard icon={<IconPhone />} title={secretariat.heading}>
@@ -116,6 +127,30 @@ function InfoSection() {
             <br />
             <a href={`tel:${secretariat.phone.replace(/\s/g, '')}`}>{secretariat.phone}</a>
           </FactCard>
+        </div>
+
+        <div className="info-section__map card">
+          <h3 className="info-section__map-title">
+            <span className="info-section__icon">
+              <IconPin />
+            </span>
+            {eventInfo.location.name}, {eventInfo.location.street}, {eventInfo.location.zipCity}
+          </h3>
+          <LocationMap
+            lat={CHURCH_LAT}
+            lon={CHURCH_LON}
+            label={`${eventInfo.location.name}, ${eventInfo.location.street}, ${eventInfo.location.zipCity}`}
+          />
+          <a
+            className="info-section__map-link"
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              `${eventInfo.location.street}, ${eventInfo.location.zipCity}`
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Route planen (Google Maps) →
+          </a>
         </div>
       </div>
     </section>

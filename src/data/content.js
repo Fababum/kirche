@@ -62,7 +62,7 @@ export const costsInfo = {
 export const travelInfo = {
   heading: "Anreise & Parken",
   text: "Parkplätze bei der Kirche vorhanden. Postauto ab Ossingen oder Marthalen.",
-  publicTransport: "",
+  publicTransport: "Postauto-Linie 621 ab Bahnhof Ossingen oder Bahnhof Marthalen, Haltestelle Truttikon.",
 };
 
 export const secretariat = {
@@ -72,7 +72,7 @@ export const secretariat = {
   phone: "052 319 12 73",
   email: "susanne.egloff@kirche-wm.ch",
   address: {
-    org: "Reformierte Kirche",
+    org: "Evangelisch-reformierte Kirchgemeinde Weinland Mitte",
     line1: "Sekretariat Rheinau",
     street: "Poststrasse 6",
     zipCity: "8462 Rheinau",
@@ -121,8 +121,8 @@ export const volunteerAreas = [
     description: "Empfange Gäste im Kafi mit Getränk und Gespräch.",
     contact: {
       name: "Violett",
-      phone: "079 [TODO: Nummer ergänzen]",
-      email: "a@kirche-wm.ch", // [TODO: vollständige E-Mail-Adresse prüfen]
+      phone: "Telefonnummer folgt",
+      email: "", // Vollständige E-Mail-Adresse noch nicht bekannt
     },
   },
   {
@@ -176,7 +176,7 @@ export const teamContacts = [
   {
     name: "Christine Keller",
     email: "christine.keller@kirche-wm.ch",
-    phone: "079 [TODO: Nummer ergänzen]",
+    phone: "Telefonnummer folgt",
   },
   {
     name: "Matthias König",
@@ -196,13 +196,13 @@ export const teamContacts = [
 ];
 
 export const footerInfo = {
-  org: "Reformierte Kirche",
+  org: "Evangelisch-reformierte Kirchgemeinde",
   secretariat: "Sekretariat Rheinau",
   street: "Poststrasse 6",
   zipCity: "8462 Rheinau",
   phone: "052 319 12 73",
   email: "susanne.egloff@kirche-wm.ch",
-  projectBy: "Reformierte Kirche Weinland Mitte",
+  projectBy: "Evangelisch-reformierte Kirchgemeinde Weinland Mitte",
   copyright: `© ${new Date().getFullYear()} Fabian Spiri`,
 };
 

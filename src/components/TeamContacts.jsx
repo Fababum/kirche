@@ -1,6 +1,8 @@
 import { teamContacts, secretariat } from '../data/content';
 import './TeamContacts.css';
 
+const HAS_DIGIT = /\d/;
+
 function TeamContacts() {
   return (
     <section id="team" className="section team-contacts">
@@ -27,7 +29,11 @@ function TeamContacts() {
             {teamContacts.map((person) => (
               <div key={person.name} className="team-contacts__row">
                 <span className="team-contacts__name">{person.name}</span>
-                <a href={`tel:${person.phone.replace(/\s/g, '')}`}>{person.phone}</a>
+                {HAS_DIGIT.test(person.phone) ? (
+                  <a href={`tel:${person.phone.replace(/\s/g, '')}`}>{person.phone}</a>
+                ) : (
+                  <span className="team-contacts__pending">{person.phone}</span>
+                )}
               </div>
             ))}
           </div>

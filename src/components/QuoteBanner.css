@@ -1,0 +1,42 @@
+.quote-banner {
+  position: relative;
+  padding: var(--space-8) 0;
+  background-image: linear-gradient(
+      rgba(38, 34, 32, 0.55),
+      rgba(38, 34, 32, 0.65)
+    ),
+    url('/images/tomb-illustration.jpg');
+  background-size: cover;
+  background-position: center 65%;
+  background-repeat: no-repeat;
+  text-align: center;
+}
+
+.quote-banner__content {
+  max-width: 620px;
+}
+
+.quote-banner__eyebrow {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffd9a8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: var(--space-2);
+}
+
+.quote-banner h2 {
+  color: #fff;
+  margin: 0;
+  font-size: 32px;
+}
+
+@media (max-width: 640px) {
+  .quote-banner {
+    padding: var(--space-7) 0;
+  }
+
+  .quote-banner h2 {
+    font-size: 26px;
+  }
+}

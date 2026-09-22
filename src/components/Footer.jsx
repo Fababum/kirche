@@ -5,13 +5,7 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="container site-footer__inner">
-        <img
-          src="/downloads/weinland_mitte_zusatz_negativ_600dpi.png"
-          alt={footerInfo.projectBy}
-          className="site-footer__logo"
-          width="200"
-          height="55"
-        />
+        <p className="site-footer__brand">{footerInfo.projectBy}</p>
         <p>
           {footerInfo.org} · {footerInfo.street}, {footerInfo.zipCity}
           <br />
@@ -24,6 +18,10 @@ function Footer() {
           {' · '}
           <a href="/admin">Admin</a>
         </p>
+        <nav className="site-footer__legal" aria-label="Rechtliches">
+          <a href="/impressum">Impressum</a>
+          <a href="/datenschutz">Datenschutz</a>
+        </nav>
         <p className="site-footer__copy">{footerInfo.copyright}</p>
       </div>
     </footer>

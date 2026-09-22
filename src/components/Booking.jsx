@@ -246,6 +246,13 @@ function Booking() {
               {submitting ? 'Wird gesendet …' : 'Jetzt reservieren'}
             </button>
 
+            <p className="booking__form-footnote">
+              Mit dem Absenden werden deine Angaben zur Organisation der Führung verwendet, siehe{' '}
+              <a href="/datenschutz" target="_blank" rel="noreferrer">
+                Datenschutzerklärung
+              </a>
+              .
+            </p>
             <p className="booking__form-footnote">{registrationInfo.deadline}</p>
           </form>
         )}

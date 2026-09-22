@@ -110,6 +110,12 @@
   text-decoration: underline;
 }
 
+.team-contacts__pending {
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: 500;
+}
+
 @media (max-width: 480px) {
   .team-contacts__row {
     flex-direction: row;

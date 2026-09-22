@@ -50,6 +50,12 @@
   text-decoration: underline;
 }
 
+.volunteer__contact-pending {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .volunteer__grid {
     grid-template-columns: 1fr;

@@ -1,6 +1,8 @@
 import { volunteerAreas } from '../data/content';
 import './Volunteer.css';
 
+const HAS_DIGIT = /\d/;
+
 function Volunteer() {
   return (
     <section id="mitarbeiten" className="section volunteer">
@@ -17,7 +19,13 @@ function Volunteer() {
               <p>{area.description}</p>
               <div className="volunteer__contact">
                 <strong>{area.contact.name}</strong>
-                <a href={`tel:${area.contact.phone.replace(/\s/g, '')}`}>{area.contact.phone}</a>
+                {HAS_DIGIT.test(area.contact.phone) ? (
+                  <a href={`tel:${area.contact.phone.replace(/\s/g, '')}`}>
+                    {area.contact.phone}
+                  </a>
+                ) : (
+                  <span className="volunteer__contact-pending">{area.contact.phone}</span>
+                )}
               </div>
             </div>
           ))}
