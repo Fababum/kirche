@@ -900,9 +900,18 @@
 }
 
 .admin-schedule__day-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 12px;
   color: var(--text-muted);
   font-size: 14px;
   font-weight: 400;
+}
+
+.admin-schedule__day-empty {
+  font-size: 12px;
 }
 
 .admin-schedule__day-tours {
@@ -950,6 +959,7 @@
   }
   .admin-schedule__day-count {
     grid-column: 3;
+    justify-content: flex-start;
     font-size: 13px;
   }
   .admin-schedule__day-tours {

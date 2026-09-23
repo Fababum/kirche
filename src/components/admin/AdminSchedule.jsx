@@ -429,7 +429,9 @@ function AdminSchedule() {
         <p className="admin-empty">Keine Führungen gefunden.</p>
       ) : (
         <div className="admin-schedule__list">
-          {[...days].map(([date, dayTours]) => (
+          {[...days].map(([date, dayTours]) => {
+            const bookingCount = dayTours.reduce((count, tour) => count + tour.bookings.length, 0);
+            return (
             <section className="admin-schedule__day" key={date} aria-labelledby={`day-title-${date}`}>
               <h2 className="admin-schedule__day-heading" id={`day-title-${date}`}>
                 <button type="button" className="admin-schedule__day-toggle"
@@ -441,7 +443,12 @@ function AdminSchedule() {
                     <path d={expandedDays.has(date) ? 'M3 10h18l-3 11H6L3 10Z' : 'M3 9h18'} />
                   </svg>
                   <span className="admin-schedule__day-date">{formatDateLabel(date)}</span>
-                  <span className="admin-schedule__day-count">{dayTours.length} {dayTours.length === 1 ? 'Führung' : 'Führungen'}</span>
+                  <span className="admin-schedule__day-count">
+                    <span>{dayTours.length} {dayTours.length === 1 ? 'Führung' : 'Führungen'}</span>
+                    <span className={bookingCount > 0 ? 'admin-badge' : 'admin-schedule__day-empty'}>
+                      {bookingCount > 0 ? `${bookingCount} ${bookingCount === 1 ? 'Reservation' : 'Reservationen'}` : 'Keine Reservationen'}
+                    </span>
+                  </span>
                 </button>
               </h2>
               <div id={`day-tours-${date}`} className="admin-schedule__day-tours" hidden={!expandedDays.has(date)}>
@@ -625,7 +632,8 @@ function AdminSchedule() {
           })}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       )}
       </>}
