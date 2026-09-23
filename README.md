@@ -24,7 +24,7 @@ Voraussetzung: Node.js ≥ 20
 ```bash
 npm install
 
-# Datenbank mit Führungs-Slots (13.-28. März 2027) befüllen
+# Datenbank einmalig mit Führungs-Slots (17.-28. März 2027) initialisieren
 npm run server:seed
 
 # Admin-Zugang anlegen
@@ -42,6 +42,25 @@ Die Webseite läuft dann unter `http://localhost:5173`, das Backend unter
 ans Backend weiter (siehe `vite.config.js`).
 
 Admin-Bereich: `http://localhost:5173/admin`
+
+### Verbindliche Buchungsregeln
+
+- Regulärer Veranstaltungszeitraum: 17.-28. März 2027. Die gemeinsamen Werte
+  stehen in `shared/event.js`.
+- Einzelanmeldungen sind möglich. Die Mindestzahl von fünf Personen gilt für
+  die gesamte Führung; es gibt keine automatische Absage bei Unterschreitung.
+  Das Sekretariat prüft die Teilnehmerzahl und kontaktiert Betroffene bei Bedarf.
+- Neue Reservationen schliessen exakt 48 Stunden vor dem Führungsbeginn in
+  Schweizer Zeit. Auch die Zeitumstellung am 28. März wird berücksichtigt.
+- Bereits angefragte Reservationen behalten ihre volle Bestätigungsfrist von
+  30 Minuten, auch wenn inzwischen der Anmeldeschluss erreicht wurde.
+- Die Standardtermine werden nur einmal initialisiert. Serverneustarts und
+  erneutes `server:seed` stellen bewusst gelöschte Termine nicht wieder her.
+- Vorhandene Datenbanken werden unverändert übernommen. Insbesondere bleiben
+  Termine und Reservationen vor dem 17. März im Admin erhalten, sind aber nicht
+  mehr öffentlich neu buchbar. Diese Alttermine vor der Live-Schaltung prüfen
+  und betroffene Gäste gegebenenfalls persönlich kontaktieren.
+- Tests ohne echte Buchungen oder Mailversand: `node --test server/*.test.js`.
 
 ---
 

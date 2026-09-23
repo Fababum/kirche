@@ -50,6 +50,7 @@ after(async () => {
 
 beforeEach((t) => {
   process.env = { ...testEnv };
+  t.mock.method(Date, 'now', () => Date.parse('2027-03-01T12:00:00Z'));
   db.exec('DELETE FROM bookings; DELETE FROM tours;');
   db.prepare('INSERT INTO tours (id, date, time, capacity) VALUES (1, ?, ?, 5)').run('2027-03-17', '14:00');
   mails = [];
@@ -387,4 +388,120 @@ test('final mail failures do not undo confirmation or retry sends on repeated co
   assert.equal(row().status, 'confirmed');
   assert.equal(seats(), 2);
   assert.equal(mails.length, 3);
+});
+
+test('public listings always enforce inclusive event bounds without altering legacy data', async () => {
+  const insert = db.prepare('INSERT INTO tours (date, time) VALUES (?, ?)');
+  for (const date of ['2027-03-16', '2027-03-28', '2027-03-29', '2027-03-20junk']) insert.run(date, '14:00');
+  insert.run('2027-03-18', '25:00');
+  const original = db.prepare('SELECT * FROM tours ORDER BY id').all();
+  for (const query of ['', '?from=2027-01-01&to=2027-12-31', '?from=2027-03-01', '?to=2027-04-01']) {
+    const response = await request(`/api/tours${query}`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body.map((tour) => tour.date), ['2027-03-17', '2027-03-28']);
+    assert.ok(response.body.every((tour) => tour.isBookingClosed === false));
+  }
+  assert.deepEqual((await request('/api/tours?from=2027-03-28&to=2027-03-28')).body.map((tour) => tour.date), ['2027-03-28']);
+  assert.deepEqual((await request('/api/tours?to=2027-03-16')).body, []);
+  assert.deepEqual(db.prepare('SELECT * FROM tours ORDER BY id').all(), original);
+});
+
+test('invalid public date filters return German validation errors', async () => {
+  for (const query of ['from=2027-02-29', 'to=invalid', 'from=', 'from=2027-03-18&to=2027-03-17', 'from=2027-03-17&from=2027-03-18']) {
+    const response = await request(`/api/tours?${query}`);
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, /gültigen Datumsbereich/);
+  }
+});
+
+test('direct bookings outside the event or at invalid local dates/times never hold seats or send mail', async () => {
+  for (const [date, time, error] of [
+    ['2027-03-16', '14:00', /17\. bis 28\. März 2027/],
+    ['2027-03-29', '14:00', /17\. bis 28\. März 2027/],
+    ['2026-03-17', '14:00', /17\. bis 28\. März 2027/],
+    ['2027-02-29', '14:00', /ungültig/],
+    ['2027-03-20junk', '14:00', /ungültig/],
+    ['2027-03-18', '24:00', /ungültig/],
+    ['2027-03-18', '9:00', /ungültig/],
+    ['2027-03-28', '02:30', /ungültig/],
+  ]) {
+    db.prepare('UPDATE tours SET date = ?, time = ? WHERE id = 1').run(date, time);
+    const response = await create();
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, error);
+    assert.equal(seats(), 0);
+    assert.equal(row(), undefined);
+    assert.equal(mails.length, 0);
+  }
+});
+
+for (const timezone of ['UTC', 'Europe/Zurich', 'America/Los_Angeles']) {
+  test(`Zurich cutoff is an actual 48 hours including March 28 DST, independent of host TZ ${timezone}`, async () => {
+    process.env.TZ = timezone;
+    for (const [date, time, cutoff] of [
+      ['2027-03-17', '14:00', '2027-03-15T13:00:00.000Z'],
+      ['2027-03-28', '01:30', '2027-03-26T00:30:00.000Z'],
+      ['2027-03-28', '03:00', '2027-03-26T01:00:00.000Z'],
+      ['2027-03-28', '14:00', '2027-03-26T12:00:00.000Z'],
+    ]) {
+      db.prepare('UPDATE tours SET date = ?, time = ? WHERE id = 1').run(date, time);
+      const closesAt = Date.parse(cutoff);
+      Date.now.mock.mockImplementation(() => closesAt - 1);
+      let tour = (await request('/api/tours')).body[0];
+      assert.equal(tour.bookingClosesAt, cutoff);
+      assert.equal(tour.isBookingClosed, false);
+      assert.equal((await create({ groupSize: 1 })).status, 201);
+      assert.equal(row().verification_expires_at, closesAt - 1 + VERIFICATION_TTL_MS);
+      const sent = mails.length;
+      const held = seats();
+      const count = db.prepare('SELECT COUNT(*) AS count FROM bookings').get().count;
+      for (const now of [closesAt, closesAt + 1, closesAt + 49 * 60 * 60 * 1000]) {
+        Date.now.mock.mockImplementation(() => now);
+        tour = (await request('/api/tours')).body[0];
+        assert.equal(tour.isBookingClosed, true);
+        assert.equal(tour.isFull, false);
+        const response = await create({ groupSize: 1 });
+        assert.equal(response.status, 409);
+        assert.match(response.body.error, /48 Stunden/);
+        assert.equal(mails.length, sent);
+        assert.equal(db.prepare('SELECT COUNT(*) AS count FROM bookings').get().count, count);
+        assert.equal(seats(), now < closesAt + VERIFICATION_TTL_MS ? held : 0);
+      }
+    }
+  });
+}
+
+test('single-person pending bookings retain full grace across cutoff; no minimum-tour cancellation', async () => {
+  const cutoff = Date.parse('2027-03-15T13:00:00Z');
+  Date.now.mock.mockImplementation(() => cutoff - 1);
+  assert.equal((await create({ groupSize: 1 })).status, 201);
+  const firstToken = tokenFrom();
+  assert.equal((await create({ groupSize: 1 })).status, 201);
+  const secondToken = tokenFrom(mails[1]);
+  const expiry = cutoff - 1 + VERIFICATION_TTL_MS;
+  Date.now.mock.mockImplementation(() => expiry - 1);
+  assert.equal((await confirm(firstToken)).status, 200);
+  Date.now.mock.mockImplementation(() => expiry);
+  assert.equal((await confirm(secondToken)).status, 410);
+  Date.now.mock.mockImplementation(() => Date.parse('2027-03-29T12:00:00Z'));
+  const tour = (await request('/api/tours')).body[0];
+  assert.equal(tour.isBookingClosed, true);
+  assert.equal(tour.bookedCount, 1);
+  assert.equal(db.prepare('SELECT is_cancelled FROM tours WHERE id = 1').get().is_cancelled, 0);
+  assert.equal((await confirm(firstToken)).status, 200);
+});
+
+test('legacy pending and confirmed reservations outside event bounds remain confirmable', async () => {
+  for (const date of ['2027-03-13', '2027-03-29']) {
+    assert.equal((await create({ groupSize: 1 })).status, 201);
+    const token = tokenFrom(mails.at(-1));
+    db.prepare('UPDATE tours SET date = ? WHERE id = 1').run(date);
+    assert.deepEqual((await request('/api/tours')).body, []);
+    assert.equal((await confirm(token)).status, 200);
+    const confirmed = row();
+    assert.equal((await confirm(token)).status, 200);
+    assert.deepEqual(row(), confirmed);
+    db.prepare("UPDATE tours SET date = '2027-03-17' WHERE id = 1").run();
+  }
+  assert.equal(seats(), 2);
 });

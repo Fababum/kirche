@@ -159,12 +159,6 @@ a {
   background-repeat: no-repeat;
 }
 
-.section--alt {
-  background-image: linear-gradient(rgba(250, 247, 242, 0.84), rgba(250, 247, 242, 0.84)),
-    url('/images/hero-illustration.jpg');
-  background-position: center 55%;
-}
-
 /* Cremiger, ruhiger Hintergrund ohne Bild. */
 .section--warm {
   background: #f5e9d6;
@@ -238,28 +232,6 @@ a {
   box-shadow: var(--shadow-md);
 }
 
-.btn--coral {
-  background: var(--coral);
-  color: #fff;
-}
-
-.btn--coral:hover {
-  background: var(--coral-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.btn--gold {
-  background: var(--gold);
-  color: #fff;
-}
-
-.btn--gold:hover {
-  background: var(--gold-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
 .btn--outline {
   background: transparent;
   color: var(--text-h);
@@ -314,18 +286,6 @@ summary:focus-visible {
   font-weight: 600;
   border: 1px solid var(--border);
   line-height: 1.6;
-}
-
-.badge--coral {
-  background: var(--coral-soft);
-  color: var(--coral-hover);
-  border-color: #d3e5c8;
-}
-
-.badge--gold {
-  background: var(--gold-soft);
-  color: var(--gold-hover);
-  border-color: #eeddb0;
 }
 
 @media (prefers-reduced-motion: reduce) {

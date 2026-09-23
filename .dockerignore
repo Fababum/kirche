@@ -7,8 +7,13 @@ dist-ssr
 npm-debug.log*
 .env
 .env.*
-server/data.db
-server/data.db-*
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite-*
+**/*.sqlite3
+**/*.sqlite3-*
+**/*.test.js
 server/data
 .vscode
 .idea

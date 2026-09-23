@@ -14,6 +14,8 @@
 // korrekten Angaben feststehen.
 // ============================================================================
 
+import { BOOKING_CUTOFF_HOURS, MIN_TOUR_PARTICIPANTS } from '../../shared/event.js';
+
 export const eventInfo = {
   title: "Osterweg Wyland",
   dateRange: "17.-28. März 2027",
@@ -36,10 +38,10 @@ export const kafi = {
 
 export const registrationInfo = {
   heading: "Rundgang reservieren",
-  subheading: "13. - 28. März 2027",
-  notice: "Anmeldung nötig. Ab 5 Personen, max. 15 Personen pro Gruppe.",
+  subheading: "17. - 28. März 2027",
+  notice: `Einzelpersonen und Gruppen sind willkommen. Eine Führung findet ab insgesamt ${MIN_TOUR_PARTICIPANTS} Personen statt, regulär mit maximal 15 Personen. Bitte melde dich an.`,
   accessibility: "Der Rundgang ist barrierefrei.",
-  deadline: "Anmeldung bis 48 Stunden vorher möglich.",
+  deadline: `Anmeldeschluss ist ${BOOKING_CUTOFF_HOURS} Stunden vor Beginn der Führung.`,
   mobileHint: "Tag antippen, dann Führung auswählen.",
 };
 

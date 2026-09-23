@@ -8,10 +8,37 @@ import { createHash, randomBytes } from 'node:crypto';
 import { db } from '../db/database.js';
 import { expirePendingBookings, VERIFICATION_TTL_MS } from '../bookings.js';
 import { sendChurchNotification, sendVisitorConfirmation, sendVisitorVerification } from '../mailer.js';
+import { EVENT_START_DATE, EVENT_END_DATE, BOOKING_CUTOFF_HOURS } from '../../shared/event.js';
 
 const router = Router();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const zurichTime = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+});
+
+function isValidDate(date) {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+}
+
+function bookingClosesAt({ date, time }) {
+  if (!isValidDate(date) || typeof time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  const wallTime = Date.parse(`${date}T${time}:00Z`);
+  let instant = wallTime;
+  // Resolve Zurich wall time without depending on the host TZ. Round-trip validation
+  // rejects nonexistent local times during the spring DST jump (02:00-02:59).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const parts = Object.fromEntries(zurichTime.formatToParts(instant).map(({ type, value }) => [type, value]));
+    const local = Date.parse(`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}Z`);
+    if (local === wallTime) return instant - BOOKING_CUTOFF_HOURS * 60 * 60 * 1000;
+    instant += wallTime - local;
+  }
+  return null;
+}
 
 // Verhindert Spam-Reservationen: max. 10 Buchungen pro 15 Min und IP.
 const bookingRateLimiter = rateLimit({
@@ -27,9 +54,12 @@ const bookingRateLimiter = rateLimit({
 router.get('/tours', (req, res) => {
   expirePendingBookings();
   const { from, to } = req.query;
+  if ((from !== undefined && !isValidDate(from)) || (to !== undefined && !isValidDate(to)) || (from && to && from > to)) {
+    return res.status(400).json({ error: 'Bitte einen gültigen Datumsbereich im Format JJJJ-MM-TT angeben.' });
+  }
 
-  let query = 'SELECT * FROM tours WHERE is_cancelled = 0';
-  const params = [];
+  let query = 'SELECT * FROM tours WHERE is_cancelled = 0 AND date >= ? AND date <= ?';
+  const params = [EVENT_START_DATE, EVENT_END_DATE];
 
   if (from) {
     query += ' AND date >= ?';
@@ -43,15 +73,22 @@ router.get('/tours', (req, res) => {
 
   const tours = db.prepare(query).all(...params);
 
-  const result = tours.map((t) => ({
-    id: t.id,
-    date: t.date,
-    time: t.time,
-    capacity: t.capacity,
-    bookedCount: t.booked_count,
-    freeSpots: Math.max(0, t.capacity - t.booked_count),
-    isFull: t.booked_count >= t.capacity,
-  }));
+  const now = Date.now();
+  const result = tours.flatMap((t) => {
+    const closesAt = bookingClosesAt(t);
+    if (closesAt === null) return [];
+    return [{
+      id: t.id,
+      date: t.date,
+      time: t.time,
+      capacity: t.capacity,
+      bookedCount: t.booked_count,
+      freeSpots: Math.max(0, t.capacity - t.booked_count),
+      isFull: t.booked_count >= t.capacity,
+      isBookingClosed: now >= closesAt,
+      bookingClosesAt: new Date(closesAt).toISOString(),
+    }];
+  });
 
   res.json(result);
 });
@@ -105,6 +142,15 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     expirePendingBookings();
     const tour = db.prepare('SELECT * FROM tours WHERE id = ? AND is_cancelled = 0').get(tourId);
     if (!tour) return { code: 404, error: 'Führung nicht gefunden.' };
+    const closesAt = bookingClosesAt(tour);
+    if (closesAt === null) return { code: 400, error: 'Datum oder Uhrzeit dieser Führung ist ungültig.' };
+    if (tour.date < EVENT_START_DATE || tour.date > EVENT_END_DATE) {
+      return { code: 400, error: 'Reservationen sind nur für Führungen vom 17. bis 28. März 2027 möglich.' };
+    }
+    const now = Date.now();
+    if (now >= closesAt) {
+      return { code: 409, error: 'Die Anmeldefrist ist abgelaufen. Neue Reservationen sind nur bis 48 Stunden vor Beginn der Führung möglich.' };
+    }
     const freeSpots = tour.capacity - tour.booked_count;
     if (size > freeSpots) {
       return { code: 409, error: `Für diese Führung sind nur noch ${freeSpots} Plätze frei.` };
@@ -122,7 +168,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
       isSchoolClass ? 1 : 0,
       trimmedNote || null,
       tokenHash,
-      Date.now() + VERIFICATION_TTL_MS
+      now + VERIFICATION_TTL_MS
     );
     db.prepare('UPDATE tours SET booked_count = booked_count + ? WHERE id = ?').run(size, tourId);
     return { id: inserted.lastInsertRowid, tour };

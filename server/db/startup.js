@@ -1,16 +1,16 @@
 // ============================================================================
 // Wird beim Serverstart einmalig ausgeführt:
-// 1. Legt fehlende Führungs-Slots an (idempotent, überschreibt nichts).
+// 1. Initialisiert Führungs-Slots einmalig; bestehende Daten bleiben unverändert.
 // 2. Legt einen Admin-Benutzer an, falls noch keiner existiert UND die
 //    Umgebungsvariablen ADMIN_USERNAME / ADMIN_PASSWORD gesetzt sind.
 //    Praktisch für den ersten Start eines Docker-Containers.
 // ============================================================================
 import bcrypt from 'bcryptjs';
 import { db } from './database.js';
-import { seedTours } from './seedLogic.js';
+import { initializeTours } from './seedLogic.js';
 
 export function runStartupSetup() {
-  const createdTours = seedTours();
+  const createdTours = initializeTours();
   if (createdTours > 0) {
     console.log(`Startup-Seed: ${createdTours} neue Führungs-Slots angelegt.`);
   }

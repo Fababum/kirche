@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { registrationInfo, secretariat } from '../data/content';
 import { api } from '../api';
+import { EVENT_START_DATE, EVENT_END_DATE } from '../../shared/event.js';
 import SchoolClassContact from './SchoolClassContact';
 import './Booking.css';
 
-const START_DATE = '2027-03-13';
-const END_DATE = '2027-03-28';
-
 const WEEKDAY_LABELS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const DAY_STATUS_LABELS = { none: 'Keine Führung', closed: 'Anmeldeschluss', free: 'Plätze frei', full: 'Ausgebucht' };
 
 function buildDateList(start, end) {
   const dates = [];
@@ -30,18 +29,23 @@ function Booking() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTour, setSelectedTour] = useState(null);
+  const [selectedTourId, setSelectedTourId] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
-    groupSize: 5,
+    groupSize: 1,
     isSchoolClass: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [receipt, setReceipt] = useState(null);
   const receiptRef = useRef(null);
+  const submittingRef = useRef(false);
+  const selectedTour = tours.find((tour) => tour.id === selectedTourId);
 
   useEffect(() => {
     if (receipt) {
@@ -50,18 +54,53 @@ function Booking() {
     }
   }, [receipt]);
 
-  const dateList = useMemo(() => buildDateList(START_DATE, END_DATE), []);
+  const dateList = useMemo(() => buildDateList(EVENT_START_DATE, EVENT_END_DATE), []);
+
+  function refreshTours() {
+    setNow(Date.now());
+    setLoading(true);
+    setReloadKey((key) => key + 1);
+  }
 
   useEffect(() => {
+    let cancelled = false;
     api
-      .getTours(START_DATE, END_DATE)
+      .getTours(EVENT_START_DATE, EVENT_END_DATE)
       .then((data) => {
+        if (cancelled) return;
         setTours(data);
         setError('');
+        setLastUpdated(new Date());
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((err) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+
+  useEffect(() => {
+    if (receipt) return;
+    const interval = setInterval(refreshTours, 60000);
+    window.addEventListener('focus', refreshTours);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refreshTours);
+    };
+  }, [receipt]);
+
+  function isClosed(tour) {
+    return tour.isBookingClosed || now >= Date.parse(tour.bookingClosesAt);
+  }
+
+  const selectedUnavailable = selectedTourId !== null && (!selectedTour || selectedTour.isFull || isClosed(selectedTour));
+
+  useEffect(() => {
+    if (!selectedTour) return;
+    // Recheck an open form at its deadline, not only on the next refresh.
+    const delay = Date.parse(selectedTour.bookingClosesAt) - Date.now();
+    if (delay <= 0 || delay > 2147483647) return;
+    const timeout = setTimeout(refreshTours, delay);
+    return () => clearTimeout(timeout);
+  }, [selectedTour]);
 
   const toursByDate = useMemo(() => {
     const map = {};
@@ -75,26 +114,28 @@ function Booking() {
   function dayStatus(iso) {
     const dayTours = toursByDate[iso] || [];
     if (dayTours.length === 0) return 'none';
-    const anyFree = dayTours.some((t) => !t.isFull);
+    if (dayTours.every(isClosed)) return 'closed';
+    const anyFree = dayTours.some((t) => !t.isFull && !isClosed(t));
     return anyFree ? 'free' : 'full';
   }
 
   function handleSelectDate(iso) {
     if (dayStatus(iso) === 'none') return;
     setSelectedDate(iso);
-    setSelectedTour(null);
+    setSelectedTourId(null);
     setSubmitError('');
   }
 
   function handleSelectTour(tour) {
-    if (tour.isFull) return;
-    setSelectedTour(tour);
+    if (tour.isFull || isClosed(tour)) return;
+    setSelectedTourId(tour.id);
     setSubmitError('');
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!selectedTour) return;
+    if (submittingRef.current || !selectedTour || selectedUnavailable || error || loading) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -104,12 +145,14 @@ function Booking() {
         groupSize: Number(form.groupSize),
       });
       setReceipt({ pending: result?.status === 'pending', email: form.email.trim() });
-      setSelectedTour(null);
+      setSelectedTourId(null);
       setSelectedDate(null);
-      setForm({ name: '', email: '', phone: '', groupSize: 5, isSchoolClass: false });
+      setForm({ name: '', email: '', phone: '', groupSize: 1, isSchoolClass: false });
     } catch (err) {
       setSubmitError(err.message);
+      refreshTours();
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -155,17 +198,26 @@ function Booking() {
       <div className="container">
         <div className="section-heading">
           <h1>{registrationInfo.heading}</h1>
+          <p>{registrationInfo.subheading} · Truttikon</p>
         </div>
 
-        <p className="booking__notice">
-          {registrationInfo.notice} {registrationInfo.accessibility}
-        </p>
-        <p className="booking__notice">Nach der Anmeldung erhältst du eine E-Mail. Bitte bestätige deine Adresse innerhalb von 30 Minuten, damit die Reservation gültig wird.</p>
+        <div className="booking__rules">
+          <p>{registrationInfo.notice}</p>
+          <p><strong>{registrationInfo.deadline}</strong> Alle Uhrzeiten sind Schweizer Zeit.</p>
+          <p>Nach der Anmeldung hast du 30 Minuten Zeit, deine E-Mail-Adresse zu bestätigen. So lange halten wir deine Plätze frei.</p>
+        </div>
 
-        {loading && <p>Führungen werden geladen …</p>}
-        {error && <p className="booking__error">{error}</p>}
+        <div className="booking__availability">
+          <p role="status">{loading ? 'Verfügbarkeit wird aktualisiert …' : lastUpdated
+            ? `Stand ${lastUpdated.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })} Uhr · aktualisiert automatisch`
+            : 'Verfügbarkeit noch nicht geladen'}</p>
+          <button type="button" className="btn btn--outline" onClick={refreshTours} disabled={loading}>
+            {error ? 'Erneut laden' : 'Aktualisieren'}
+          </button>
+        </div>
+        {error && <p className="booking__error" role="alert">{error} Bitte lade die Verfügbarkeit erneut, bevor du reservierst.</p>}
 
-        {!loading && !error && (
+        {lastUpdated && (
           <div className="booking__calendar-scroll">
             <div className="booking__calendar">
               {dateList.map((iso) => {
@@ -179,6 +231,8 @@ function Booking() {
                       isSelected ? 'booking__day--selected' : ''
                     }`}
                     disabled={status === 'none'}
+                    aria-pressed={isSelected}
+                    aria-label={`${formatDateLabel(iso)}: ${DAY_STATUS_LABELS[status]}`}
                     onClick={() => handleSelectDate(iso)}
                   >
                     <span className="booking__day-weekday">
@@ -187,9 +241,7 @@ function Booking() {
                     <span className="booking__day-date">
                       {formatDateLabel(iso).split(' ')[1] || iso.slice(8, 10)}
                     </span>
-                    {status !== 'none' && (
-                      <span className={`booking__dot booking__dot--${status}`} />
-                    )}
+                    <span className="booking__day-status">{DAY_STATUS_LABELS[status]}</span>
                   </button>
                 );
               })}
@@ -197,23 +249,24 @@ function Booking() {
           </div>
         )}
 
-        {selectedDate && !error && (
+        {selectedDate && (
           <div className="booking__slots">
-            <h3>Verfügbare Führungen am {formatDateLabel(selectedDate)}</h3>
+            <h2>Uhrzeit wählen · {formatDateLabel(selectedDate)}</h2>
             <div className="booking__slot-list">
               {(toursByDate[selectedDate] || []).map((tour) => (
                 <button
                   key={tour.id}
                   type="button"
-                  disabled={tour.isFull}
+                  disabled={tour.isFull || isClosed(tour)}
+                  aria-pressed={selectedTourId === tour.id}
                   className={`booking__slot ${
                     selectedTour?.id === tour.id ? 'booking__slot--selected' : ''
-                  } ${tour.isFull ? 'booking__slot--full' : ''}`}
+                  } ${tour.isFull || isClosed(tour) ? 'booking__slot--full' : ''}`}
                   onClick={() => handleSelectTour(tour)}
                 >
                   {tour.time} Uhr
                   <span className="booking__slot-spots">
-                    {tour.isFull ? 'ausgebucht' : `${tour.freeSpots} Plätze frei`}
+                    {isClosed(tour) ? 'Anmeldeschluss erreicht' : tour.isFull ? 'ausgebucht' : `${tour.freeSpots} Plätze frei`}
                   </span>
                 </button>
               ))}
@@ -221,11 +274,16 @@ function Booking() {
           </div>
         )}
 
+        {selectedUnavailable && <p className="booking__error" role="alert">Diese Führung ist nicht mehr buchbar. Bitte wähle eine andere Uhrzeit. Deine Formulareingaben bleiben erhalten.</p>}
+        {submitError && <p className="booking__error" role="alert">{submitError}</p>}
         {selectedTour && (
           <form className="booking__form card" onSubmit={handleSubmit}>
             <h3>
               Reservation für {formatDateLabel(selectedDate)}, {selectedTour.time} Uhr
             </h3>
+            <p className="booking__form-footnote">Anmeldung möglich bis {new Date(selectedTour.bookingClosesAt).toLocaleString('de-CH', {
+              day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich',
+            })} Uhr (Schweizer Zeit).</p>
 
             <div className="booking__form-row">
               <label>
@@ -258,7 +316,7 @@ function Booking() {
                 />
               </label>
               <label>
-                Gruppengrösse *
+                Anzahl Personen *
                 <input
                   required
                   type="number"
@@ -282,9 +340,7 @@ function Booking() {
               <p className="booking__form-footnote"><SchoolClassContact /></p>
             )}
 
-            {submitError && <p className="booking__error">{submitError}</p>}
-
-            <button type="submit" className="btn btn--primary" disabled={submitting}>
+            <button type="submit" className="btn btn--primary" disabled={submitting || selectedUnavailable || Boolean(error) || loading}>
               {submitting ? 'Wird gesendet …' : 'Bestätigungs-E-Mail anfordern'}
             </button>
 
@@ -296,6 +352,7 @@ function Booking() {
               .
             </p>
             <p className="booking__form-footnote">{registrationInfo.deadline}</p>
+            <p className="booking__form-footnote">{registrationInfo.accessibility}</p>
           </form>
         )}
 

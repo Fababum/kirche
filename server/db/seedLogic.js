@@ -1,9 +1,10 @@
 // ============================================================================
-// Wiederverwendbare Seed-Logik für die Führungs-Zeitslots (13. - 28. März 2027).
+// Wiederverwendbare Seed-Logik für die Führungs-Zeitslots (17. - 28. März 2027).
 // Wird sowohl vom CLI-Skript (seed.js) als auch automatisch beim Serverstart
 // (index.js) verwendet, damit ein frischer Container sofort einsatzbereit ist.
 // ============================================================================
 import { db } from './database.js';
+import { EVENT_START_DATE, EVENT_END_DATE } from '../../shared/event.js';
 
 // Reguläre Wochenzeiten laut Content-Vorgabe (Truttikon):
 // Di - Do: 10-11 + 14-19 Uhr
@@ -37,13 +38,11 @@ function slotsForWeekday(weekday) {
   }
 }
 
-export const SEED_START_DATE = '2027-03-13';
-export const SEED_END_DATE = '2027-03-28';
 const DEFAULT_CAPACITY = 15;
 
 export function seedTours({
-  startDate = SEED_START_DATE,
-  endDate = SEED_END_DATE,
+  startDate = EVENT_START_DATE,
+  endDate = EVENT_END_DATE,
   capacity = DEFAULT_CAPACITY,
 } = {}) {
   const insertStmt = db.prepare(
@@ -53,13 +52,13 @@ export function seedTours({
     `SELECT id FROM tours WHERE date = ? AND time = ?`
   );
 
-  let current = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
+  const current = new Date(startDate + 'T00:00:00Z');
+  const end = new Date(endDate + 'T00:00:00Z');
   let created = 0;
 
   while (current <= end) {
     const iso = current.toISOString().slice(0, 10);
-    const weekday = current.getDay();
+    const weekday = current.getUTCDay();
     const times = slotsForWeekday(weekday);
 
     for (const time of times) {
@@ -70,8 +69,25 @@ export function seedTours({
       }
     }
 
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
 
   return created;
+}
+
+// Startup and CLI share this persistent baseline. Do not bump the version to
+// refill slots: missing tours may have been deliberately deleted by an admin.
+export function initializeTours() {
+  return db.transaction(() => {
+    db.exec(`CREATE TABLE IF NOT EXISTS initialization_flags (
+      key TEXT PRIMARY KEY,
+      initialized_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )`);
+    const key = 'default-tours-v1';
+    if (db.prepare('SELECT 1 FROM initialization_flags WHERE key = ?').get(key)) return 0;
+    const hasTours = db.prepare('SELECT 1 FROM tours LIMIT 1').get();
+    const created = hasTours ? 0 : seedTours();
+    db.prepare('INSERT INTO initialization_flags (key) VALUES (?)').run(key);
+    return created;
+  }).immediate();
 }

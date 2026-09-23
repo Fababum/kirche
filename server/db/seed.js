@@ -1,10 +1,11 @@
 // ============================================================================
-// CLI-Skript: legt die Führungs-Zeitslots für den gesamten Zeitraum an.
+// CLI-Skript: initialisiert die Führungs-Zeitslots einmalig wie beim Serverstart.
 // Ausführen mit: node server/db/seed.js
-// (Wird beim Docker-Start auch automatisch aufgerufen, siehe server/index.js)
+// Wiederholungen sind No-ops, auch nach Löschung aller Slots. Bestehende Daten
+// werden als Baseline übernommen; fehlende/gelöschte Slots werden nicht ergänzt.
 // ============================================================================
 import 'dotenv/config';
-import { seedTours } from './seedLogic.js';
+import { initializeTours } from './seedLogic.js';
 
-const created = seedTours();
-console.log(`Seed abgeschlossen: ${created} neue Führungs-Slots angelegt.`);
+const created = initializeTours();
+console.log(`Einmalige Initialisierung abgeschlossen: ${created} neue Führungs-Slots angelegt. Bestehende oder gelöschte Slots werden nicht ergänzt.`);

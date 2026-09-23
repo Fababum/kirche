@@ -48,6 +48,7 @@ RUN npm ci --omit=dev
 # Fertiges Frontend-Build sowie Server-Code übernehmen.
 COPY --from=build /app/dist ./dist
 COPY server ./server
+COPY shared ./shared
 
 # Standard-Speicherort für die SQLite-Datenbank innerhalb des Containers.
 # Über docker-compose wird hierauf ein Volume gemountet, damit Reservationen

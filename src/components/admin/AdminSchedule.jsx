@@ -430,7 +430,7 @@ function AdminSchedule() {
       ) : (
         <div className="admin-schedule__list">
           {[...days].map(([date, dayTours]) => {
-            const bookingCount = dayTours.reduce((count, tour) => count + tour.bookings.length, 0);
+            const bookingCount = dayTours.reduce((count, tour) => count + tour.bookings.filter(isActiveBooking).length, 0);
             return (
             <section className="admin-schedule__day" key={date} aria-labelledby={`day-title-${date}`}>
               <h2 className="admin-schedule__day-heading" id={`day-title-${date}`}>
