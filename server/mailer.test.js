@@ -14,6 +14,8 @@ const booking = {
 };
 const tour = { date: '2027-03-17', time: '14:00' };
 const senders = [sendChurchNotification, sendVisitorConfirmation];
+const allSenders = [sendVisitorVerification, ...senders];
+const token = 'ab'.repeat(32);
 let requests;
 
 beforeEach((t) => {
@@ -35,8 +37,13 @@ test('missing API key skips both messages without network requests', async () =>
 });
 
 test('verification requires configuration and uses a fragment token and contact details', async () => {
-  const token = 'ab'.repeat(32);
-  await assert.rejects(sendVisitorVerification(booking, tour, token), /nicht konfiguriert/);
+  for (const key of [undefined, '', '  ']) {
+    if (key === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = key;
+    await assert.rejects(sendVisitorVerification(booking, tour, token), {
+      message: 'Verifikationsmail ist nicht konfiguriert.', code: 'MAIL_NOT_CONFIGURED',
+    });
+  }
   assert.equal(requests.length, 0);
   process.env.RESEND_API_KEY = 're_test_only';
   process.env.PUBLIC_URL = 'https://site.example.test/';
@@ -59,8 +66,25 @@ test('verification rejects provider errors, missing acceptance ID, and network e
     () => { throw new Error('offline'); },
   ]) {
     globalThis.fetch.mock.mockImplementation(result);
-    await assert.rejects(sendVisitorVerification(booking, tour, 'ab'.repeat(32)), /nicht angenommen/);
+    await assert.rejects(sendVisitorVerification(booking, tour, token), {
+      message: 'Verifikationsmail wurde nicht angenommen.', code: 'MAIL_REJECTED',
+    });
   }
+});
+
+test('verification preserves numeric provider status without exposing diagnostics', async (t) => {
+  process.env.RESEND_API_KEY = 're_test_only';
+  const post = t.mock.method(Resend.prototype, 'post');
+  for (const statusCode of [429, '429', undefined]) {
+    post.mock.mockImplementation(async () => ({ error: { message: `secret ${token}`, statusCode } }));
+    await assert.rejects(sendVisitorVerification(booking, tour, token), (error) => {
+      assert.equal(error.code, 'MAIL_REJECTED');
+      assert.equal(error.providerStatus, Number.isInteger(statusCode) ? statusCode : undefined);
+      assert.doesNotMatch(error.message, /secret|abab/);
+      return true;
+    });
+  }
+  assert.equal(console.error.mock.callCount(), 0);
 });
 
 test('missing notification recipient only skips the church message', async () => {
@@ -117,7 +141,7 @@ test('reads runtime configuration and defaults to the canonical sender and links
   assert.equal(requests.length, 4);
 });
 
-test('escapes user-controlled HTML in both messages without altering recipients', async () => {
+test('escapes user-controlled HTML in all messages without altering recipients or plain text', async () => {
   process.env.RESEND_API_KEY = 're_test_only';
   process.env.NOTIFY_EMAIL = 'notifications@example.test';
   const unsafe = `<img src=x onerror="alert('x')"> &`;
@@ -126,11 +150,125 @@ test('escapes user-controlled HTML in both messages without altering recipients'
     ...booking, name: unsafe, email: `${unsafe}@example.test`,
     phone: unsafe, note: unsafe, groupSize: unsafe,
   };
-  for (const send of senders) await send(maliciousBooking, { ...tour, time: unsafe });
-  assert.equal(requests[0].mail.html.split(escaped).length - 1, 6);
-  assert.equal(requests[1].mail.html.split(escaped).length - 1, 3);
-  for (const { mail } of requests) assert.doesNotMatch(mail.html, /<img/);
-  assert.equal(requests[1].mail.to, maliciousBooking.email);
+  for (const send of allSenders) await send(maliciousBooking, { ...tour, time: unsafe }, token);
+  for (const { mail } of requests) {
+    assert.ok(mail.html.includes(escaped));
+    assert.ok(!mail.html.includes(unsafe));
+    assert.equal((mail.html.match(/<img\b/g) || []).length, 1);
+    assert.match(mail.html, /<img src="https:\/\/osterweg-wyland\.com\/images\/logo\.png"/);
+    assert.doesNotMatch(mail.html, /<script\b|<img src=x|<[^>]*\sonerror=/);
+    assert.ok(mail.text.includes(unsafe));
+    assert.ok(!mail.text.includes(escaped));
+  }
+  for (const label of ['Name', 'E-Mail', 'Telefon', 'Notiz', 'Personen', 'Uhrzeit']) {
+    assert.ok(requests[1].mail.text.includes(`${label}: ${unsafe}`));
+  }
+  assert.equal(requests[0].mail.to, maliciousBooking.email);
+  assert.equal(requests[2].mail.to, maliciousBooking.email);
+});
+
+test('all three messages share accessible email-safe HTML and equivalent plain text', async () => {
+  process.env.RESEND_API_KEY = 're_test_only';
+  process.env.NOTIFY_EMAIL = 'notifications@example.test';
+  process.env.PUBLIC_URL = 'https://site.example.test/nested/';
+  for (const send of allSenders) await send(booking, tour, token);
+  const links = [
+    `https://site.example.test/reservation/bestaetigen#token=${token}`,
+    'https://site.example.test/admin', 'https://site.example.test/',
+  ];
+  for (const [index, { mail }] of requests.entries()) {
+    for (const content of [mail.html, mail.text]) {
+      for (const value of ['17.03.2027', '14:00 Uhr', 'Personen', '4', 'Reformierte Kirche, Hauptstrasse, 8467 Truttikon',
+        'Susanne Egloff', 'susanne.egloff@kirche-wm.ch', '052 319 12 73', 'Fragen', 'Änderungen', 'Schulklassen',
+        'Evangelisch-reformierte Kirchgemeinde Weinland Mitte', 'Sekretariat Rheinau', 'Poststrasse 6', '8462 Rheinau',
+        'Bitte antworte nicht', links[index]]) assert.ok(content.includes(value), value);
+    }
+    assert.match(mail.html, /<html lang="de">/);
+    assert.equal((mail.html.match(/<h1\b/g) || []).length, 1);
+    assert.match(mail.html, /<table role="presentation"/);
+    assert.match(mail.html, /max-width:600px/);
+    assert.match(mail.html, /\[if mso\]/);
+    assert.match(mail.html, /mso-hide:all/);
+    assert.match(mail.html, /font-family:Arial,Helvetica,sans-serif/);
+    for (const color of ['#fdedcf', '#fff8eb', '#f4c880', '#a9425f', '#29211f']) assert.ok(mail.html.includes(color));
+    assert.match(mail.html, /border:16px solid #a9425f;[^"<>]*color:#ffffff/);
+    assert.ok(mail.html.includes(`href="${links[index]}"`));
+    assert.ok(mail.html.includes(`>${links[index]}</a>`));
+    assert.match(mail.html, /kopiere diesen Link/);
+    assert.match(mail.html, /<td align="right"[^>]*>\s*<a href="https:\/\/www\.kirche-wm\.ch\/"[^>]*><img src="https:\/\/site\.example\.test\/images\/logo\.png" alt="Reformierte Kirche Weinland Mitte" width="190"/);
+    assert.ok(mail.html.lastIndexOf('<img') > mail.html.indexOf('Poststrasse 6'));
+    assert.doesNotMatch(mail.html, /<script\b|<style\b|<link\b|<form\b|<iframe\b|@font-face|javascript:/i);
+    assert.doesNotMatch(mail.text, /<table\b|<h1\b|&amp;|&lt;/);
+  }
+  for (const content of [requests[0].mail.html, requests[0].mail.text]) {
+    assert.match(content, /Hallo Test Visitor/);
+    assert.match(content, /noch nicht bestätigt/);
+    assert.match(content, /Das Öffnen des Links allein bestätigt noch nichts/);
+    assert.match(content, /Nur wenn du deine Reservation nicht innerhalb von 30 Minuten bestätigst, verfällt sie und die Plätze werden automatisch wieder freigegeben/);
+    assert.match(content, /Bereits bestätigte Reservationen bleiben bestehen/);
+    assert.doesNotMatch(content, /\?token=|Danach werden die Plätze/);
+  }
+  for (const { mail } of requests.slice(1)) {
+    for (const content of [mail.html, mail.text]) {
+      assert.match(content, /bestätigt/);
+      assert.doesNotMatch(content, /30 Minuten|verfällt|freigegeben|#token=|noch nicht bestätigt/);
+    }
+  }
+  assert.match(requests[1].mail.text, /Liebes Osterweg-Team/);
+  assert.match(requests[1].mail.text, /Schulklasse: Nein\nNotiz: Test note/);
+  assert.match(requests[2].mail.text, /Hallo Test Visitor/);
+  assert.match(requests[2].mail.text, /Du musst nichts weiter bestätigen/);
+});
+
+test('reply-to stays unchanged and is escaped only in HTML in every message', async () => {
+  process.env.RESEND_API_KEY = 're_test_only';
+  process.env.NOTIFY_EMAIL = 'notifications@example.test';
+  process.env.MAIL_REPLY_TO = 'Kontakt & Team <reply@example.test>';
+  for (const send of allSenders) await send(booking, tour, token);
+  for (const { mail } of requests) {
+    assert.equal(mail.reply_to, process.env.MAIL_REPLY_TO);
+    assert.match(mail.html, /Kontakt &amp; Team &lt;reply@example.test&gt;/);
+    assert.ok(mail.text.includes(process.env.MAIL_REPLY_TO));
+    for (const content of [mail.html, mail.text]) {
+      assert.match(content, /per Antwort auf diese E-Mail/);
+      assert.doesNotMatch(content, /Bitte antworte nicht/);
+    }
+  }
+});
+
+test('fragment URLs remain plain in text and are escaped once in HTML attributes and fallback', async () => {
+  process.env.RESEND_API_KEY = 're_test_only';
+  process.env.PUBLIC_URL = 'https://site.example.test/base?unused=1&other=2';
+  const specialToken = `${token}&value="<test>'`;
+  await sendVisitorVerification(booking, tour, specialToken);
+  const { mail } = requests[0];
+  const url = `https://site.example.test/reservation/bestaetigen#token=${token}&value=%22%3Ctest%3E'`;
+  const htmlUrl = url.replace('&', '&amp;').replace("'", '&#39;');
+  assert.ok(mail.text.includes(url));
+  assert.ok(mail.html.includes(`href="${htmlUrl}"`));
+  assert.ok(mail.html.includes(`>${htmlUrl}</a>`));
+  assert.doesNotMatch(mail.text, /&amp;|&#39;/);
+  assert.doesNotMatch(mail.html, /&amp;amp;|&amp;#39;/);
+});
+
+test('long names, contact fields, notes and links have fluid wrapping without truncation', async () => {
+  process.env.RESEND_API_KEY = 're_test_only';
+  process.env.NOTIFY_EMAIL = 'notifications@example.test';
+  const long = 'Unbroken'.repeat(150);
+  for (const send of allSenders) {
+    await send({ ...booking, name: long, email: `${long}@example.test`, phone: long, note: `${long}\nSecond line`, isSchoolClass: true }, tour, token);
+  }
+  for (const { mail } of requests) {
+    assert.ok(mail.html.includes(long));
+    assert.ok(mail.text.includes(long));
+    assert.match(mail.html, /table-layout:fixed/);
+    assert.match(mail.html, /overflow-wrap:anywhere;word-wrap:break-word;word-break:break-word/);
+    assert.doesNotMatch(mail.html, /white-space:nowrap|min-width:/);
+    assert.match(mail.html, /<a href="https:[^"]+" style="[^"]*overflow-wrap:anywhere/);
+  }
+  assert.ok(requests[1].mail.html.includes(`${long}\nSecond line`));
+  assert.match(requests[1].mail.html, /white-space:pre-line/);
+  assert.match(requests[1].mail.text, /Schulklasse: Ja/);
 });
 
 test('PUBLIC_URL works without a trailing slash and resolves links from the site root', async () => {
