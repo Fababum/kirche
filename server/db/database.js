@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { migrateVerification } from './migrations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Erlaubt es, den Speicherort der Datenbank per Umgebungsvariable zu
@@ -14,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'data.db');
 
 // Stellt sicher, dass das Zielverzeichnis existiert (wichtig für Docker-Volumes).
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
@@ -40,7 +41,7 @@ db.exec(`
     group_size INTEGER NOT NULL DEFAULT 1,
     is_school_class INTEGER NOT NULL DEFAULT 0,
     note TEXT,
-    status TEXT NOT NULL DEFAULT 'confirmed', -- confirmed | cancelled
+    status TEXT NOT NULL DEFAULT 'pending', -- pending | confirmed | cancelled | expired
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -54,5 +55,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_tour_id ON bookings(tour_id);
   CREATE INDEX IF NOT EXISTS idx_tours_date ON tours(date);
 `);
+
+migrateVerification(db);
 
 export default db;

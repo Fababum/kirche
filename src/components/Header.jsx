@@ -4,7 +4,7 @@ import './Header.css';
 
 // `minimal`: wird auf Unterseiten (Impressum, Datenschutz) verwendet, die
 // keine der Anker-Sections der Startseite (#reservieren, #informationen, ...)
-// besitzen. Zeigt dann nur das Logo (verlinkt zurück zur Startseite) ohne
+// besitzen. Zeigt dann nur den Seitennamen (verlinkt zur Startseite) ohne
 // die sonst ins Leere laufende Navigation.
 function Header({ minimal = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -22,13 +22,7 @@ function Header({ minimal = false }) {
           onClick={handleNavClick}
           aria-label={eventInfo.title}
         >
-          <img
-            src="/images/logo.png"
-            alt={eventInfo.title}
-            className="site-header__logo-img"
-            width="595"
-            height="207"
-          />
+          {eventInfo.title}
         </a>
 
         {!minimal && (

@@ -1,3 +1,10 @@
+export const BOOKING_STATUS_LABELS = {
+  pending: 'E-Mail-Bestätigung ausstehend',
+  confirmed: 'Bestätigt',
+  cancelled: 'Storniert',
+  expired: 'Nicht bestätigt / abgelaufen',
+};
+
 // Erstellt eine echte, sauber formatierte Excel-Datei (.xlsx) aus der
 // Reservationsliste - öffnet ohne Probleme in Excel/LibreOffice/Numbers,
 // inkl. sinnvoller Spaltenbreiten, damit Nicht-Techniker die Datei direkt
@@ -26,7 +33,7 @@ export async function downloadBookingsExcel(bookings) {
     b.phone || '',
     b.group_size,
     b.is_school_class ? 'Ja' : 'Nein',
-    b.status === 'cancelled' ? 'Storniert' : 'Bestätigt',
+    BOOKING_STATUS_LABELS[b.status] || 'Unbekannter Status',
     b.note || '',
   ]);
 
@@ -41,7 +48,7 @@ export async function downloadBookingsExcel(bookings) {
     { wch: 14 }, // Telefon
     { wch: 10 }, // Personen
     { wch: 12 }, // Schulklasse
-    { wch: 12 }, // Status
+    { wch: 32 }, // Status
     { wch: 30 }, // Notiz
   ];
 

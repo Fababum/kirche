@@ -1,167 +1,48 @@
-import { tourInfo, costsInfo, travelInfo, secretariat, kafi, eventInfo } from '../data/content';
-import LocationMap from './LocationMap';
+import { tourInfo, costsInfo, travelInfo, kafi, registrationInfo } from '../data/content';
 import './InfoSection.css';
 
-// Koordinaten der reformierten Kirche Truttikon (Gebäude, nicht nur
-// Strassenmittelpunkt) - via OpenStreetMap/Nominatim ermittelt.
-const CHURCH_LAT = 47.6301075;
-const CHURCH_LON = 8.7263536;
-
-const ICON_PROPS = {
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.6,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  'aria-hidden': true,
-  focusable: false,
-};
-
-function IconClock() {
+function Schedule({ title, rows, description }) {
   return (
-    <svg {...ICON_PROPS}>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 7.5V12l3 2" />
-    </svg>
-  );
-}
-
-function IconCup() {
-  return (
-    <svg {...ICON_PROPS}>
-      <path d="M5 8h11v5.5A4.5 4.5 0 0 1 11.5 18h-2A4.5 4.5 0 0 1 5 13.5z" />
-      <path d="M16 9.5h1.5a2.5 2.5 0 0 1 0 5H16" />
-      <path d="M8 4.5c0 .9-1 .9-1 1.8M11.5 4.5c0 .9-1 .9-1 1.8" />
-    </svg>
-  );
-}
-
-function IconCoin() {
-  return (
-    <svg {...ICON_PROPS}>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M9.5 14.2c.4.7 1.3 1.1 2.5 1.1 1.6 0 2.6-.7 2.6-1.8 0-2.3-5.2-.8-5.2-3.2 0-1.1 1-1.8 2.6-1.8 1.2 0 2.1.4 2.5 1.1M12 7.7v1M12 15.3v1" />
-    </svg>
-  );
-}
-
-function IconPin() {
-  return (
-    <svg {...ICON_PROPS}>
-      <path d="M12 21s6.5-6.1 6.5-11A6.5 6.5 0 0 0 5.5 10c0 4.9 6.5 11 6.5 11Z" />
-      <circle cx="12" cy="10" r="2.3" />
-    </svg>
-  );
-}
-
-function IconPhone() {
-  return (
-    <svg {...ICON_PROPS}>
-      <path d="M6 4.5h3l1.3 3.6-2 1.8a11.5 11.5 0 0 0 5.8 5.8l1.8-2 3.6 1.3v3a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 4.5 6.1 1.5 1.5 0 0 1 6 4.5Z" />
-    </svg>
-  );
-}
-
-function ScheduleCard({ icon, title, rows, tone }) {
-  return (
-    <div className="card info-section__card">
-      <div className="info-section__card-head">
-        <span className={`info-section__icon${tone ? ` info-section__icon--${tone}` : ''}`}>
-          {icon}
-        </span>
-        <h3>{title}</h3>
-      </div>
-      <div className="info-section__rows">
+    <section className="info-section__block">
+      <h3>{title}</h3>
+      {description && <p>{description}</p>}
+      <dl className="info-section__schedule">
         {rows.map((row) => (
-          <div className="info-section__row" key={row.days}>
-            <span className="info-section__row-label">{row.days}</span>
-            <span className="info-section__row-leader" aria-hidden="true" />
-            <span className="info-section__row-value">{row.time}</span>
+          <div className="info-section__schedule-row" key={row.days}>
+            <dt>{row.days}</dt>
+            <dd>{row.time}</dd>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function FactCard({ icon, title, tone, children }) {
-  return (
-    <div className="card info-section__card">
-      <div className="info-section__card-head">
-        <span className={`info-section__icon${tone ? ` info-section__icon--${tone}` : ''}`}>
-          {icon}
-        </span>
-        <h3>{title}</h3>
-      </div>
-      <p className="info-section__fact-text">{children}</p>
-    </div>
+      </dl>
+    </section>
   );
 }
 
 function InfoSection() {
   return (
-    <section id="informationen" className="section section--alt info-section">
-      <div className="container">
-        <div className="section-heading">
-          <h2>Gut zu wissen</h2>
-        </div>
+    <section id="informationen" className="info-section" aria-labelledby="informationen-heading">
+      <div className="info-section__image" aria-hidden="true" />
+      <div className="info-section__content">
+        <h2 id="informationen-heading">Informationen</h2>
 
-        <div className="info-section__schedules">
-          <ScheduleCard
-            icon={<IconClock />}
-            title={tourInfo.heading}
-            rows={tourInfo.schedule}
-            tone="accent"
-          />
-          <ScheduleCard icon={<IconCup />} title={kafi.name} rows={kafi.hours} tone="gold" />
-        </div>
+        <Schedule
+          title={tourInfo.heading}
+          rows={tourInfo.schedule}
+          description={tourInfo.description}
+        />
+        <Schedule title={kafi.name} rows={kafi.hours} />
 
-        <div className="info-section__facts">
-          <FactCard icon={<IconCoin />} title={costsInfo.heading} tone="coral">
-            {costsInfo.text}
-          </FactCard>
+        <section className="info-section__block">
+          <h3>{costsInfo.heading}</h3>
+          <p>{costsInfo.text}</p>
+          <p>{registrationInfo.accessibility}</p>
+        </section>
 
-          <FactCard icon={<IconPin />} title={travelInfo.heading} tone="accent">
-            {travelInfo.text}
-            {travelInfo.publicTransport && (
-              <>
-                <br />
-                {travelInfo.publicTransport}
-              </>
-            )}
-          </FactCard>
-
-          <FactCard icon={<IconPhone />} title={secretariat.heading} tone="gold">
-            {secretariat.name}
-            <br />
-            <a href={`tel:${secretariat.phone.replace(/\s/g, '')}`}>{secretariat.phone}</a>
-          </FactCard>
-        </div>
-
-        <div className="info-section__map card">
-          <h3 className="info-section__map-title">
-            <span className="info-section__icon info-section__icon--coral">
-              <IconPin />
-            </span>
-            {eventInfo.location.name}, {eventInfo.location.street}, {eventInfo.location.zipCity}
-          </h3>
-          <LocationMap
-            lat={CHURCH_LAT}
-            lon={CHURCH_LON}
-            label={`${eventInfo.location.name}, ${eventInfo.location.street}, ${eventInfo.location.zipCity}`}
-          />
-          <a
-            className="info-section__map-link"
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-              `${eventInfo.location.street}, ${eventInfo.location.zipCity}`
-            )}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Route planen (Google Maps) →
-          </a>
-        </div>
+        <section className="info-section__block">
+          <h3>{travelInfo.heading}</h3>
+          <p>{travelInfo.text}</p>
+          {travelInfo.publicTransport && <p>{travelInfo.publicTransport}</p>}
+        </section>
       </div>
     </section>
   );

@@ -81,25 +81,60 @@ nicht verloren.
    fly secrets set ADMIN_USERNAME=admin ADMIN_PASSWORD="ein-sicheres-passwort"
    ```
 
-5b. **E-Mail-Benachrichtigungen einrichten (empfohlen)** - die Kirche erhält
-    dann bei jeder neuen Reservation automatisch eine E-Mail, und Besucher
-    bekommen eine Buchungsbestätigung. Ohne diesen Schritt funktioniert die
-    Seite trotzdem, nur ohne Benachrichtigungen.
+5b. **E-Mail-Versand einrichten (erforderlich)** - eine neue Reservation hält
+    Plätze für 30 Minuten vorläufig frei und sendet zuerst eine Verifikationsmail
+    über Resend. Erst nach ausdrücklicher Bestätigung der E-Mail-Adresse wird
+    die Reservation verbindlich. Ohne `RESEND_API_KEY` oder bei einem Fehler
+    des Verifikationsversands antwortet die API mit `503`, storniert die
+    vorläufige Reservation und gibt die Plätze wieder frei.
 
-    1. Kostenlosen Account auf https://resend.com erstellen (100 Mails/Tag
-       gratis, reicht für diese Seite problemlos).
-    2. Entweder eine eigene Domain unter "Domains" verifizieren (empfohlen,
-       falls verfügbar), oder vorerst mit der Test-Absenderadresse
-       `onboarding@resend.dev` starten.
-    3. Unter "API Keys" einen neuen Key erzeugen.
-    4. Als Fly-Secrets setzen:
-       ```bash
-       fly secrets set RESEND_API_KEY="re_dein_api_key"
-       fly secrets set NOTIFY_EMAIL="info@kirche-wm.ch"
-       fly secrets set MAIL_FROM="Osterweg Wyland <onboarding@resend.dev>"
-       ```
-       (`MAIL_FROM` ggf. anpassen, sobald eine eigene Domain verifiziert ist,
-       z.B. `Osterweg Wyland <info@eure-domain.ch>`.)
+    Die Domain `osterweg-wyland.com` ist laut bereitgestelltem Screenshot bei
+    Resend verifiziert. Standard-Absender in Code, Docker und `fly.toml` ist
+    `Osterweg Wyland <noreply@osterweg-wyland.com>` (`MAIL_FROM`).
+    Die Domain-Verifizierung allein bestätigt keine Mailzustellung.
+
+    Für Fly wird `RESEND_API_KEY` als Secret benötigt. `NOTIFY_EMAIL` und die
+    optionale Antwortadresse `MAIL_REPLY_TO` erst nach Bestätigung durch die
+    Verantwortlichen setzen. Die folgenden Werte sind nur Platzhalter:
+
+    ```bash
+    fly secrets set RESEND_API_KEY="<RESEND_API_KEY>"
+    fly secrets set NOTIFY_EMAIL="<BESTAETIGTE_EMPFAENGERADRESSE>"
+    # Optional, nur für eine bestätigte und betreute Antwortadresse:
+    fly secrets set MAIL_REPLY_TO="<BESTAETIGTE_ANTWORTADRESSE>"
+    ```
+
+    Ohne `NOTIFY_EMAIL` entfällt nur die Kirchen-Benachrichtigung. Ohne
+    `MAIL_REPLY_TO` wird kein Reply-To gesetzt; die Besucher-Bestätigung verweist
+    für Fragen, Änderungen und Schulklassen direkt auf Susanne Egloff
+    (`susanne.egloff@kirche-wm.ch`, `052 319 12 73`), statt Antworten auf
+    die Noreply-Adresse zu empfehlen. Mit `MAIL_REPLY_TO` wird diese Adresse als
+    Reply-To für alle Mails verwendet. Auch die Verifikationsmail enthält
+    Susannes Kontaktdaten.
+
+    `PUBLIC_URL` ist die einzelne öffentliche HTTP(S)-Basis-URL für Mail-Links
+    (Standard: `https://osterweg-wyland.com`), unabhängig von der
+    kommagetrennten CORS-Liste `CLIENT_ORIGIN`. Der Verwaltungslink führt zu
+    `/admin`. Lokal oder bei einer anderen Domain `PUBLIC_URL` entsprechend
+    setzen. Für lokale Entwicklung und Docker stehen die Variablen in
+    `.env.example`; Docker Compose reicht sie an den Server weiter.
+
+    Nach erfolgreicher Verifikation werden einmalig die abschliessende
+    Besucher-Bestätigung und die Kirchen-Benachrichtigung versucht. Fehler
+    dieser beiden Mails werden protokolliert, machen die bestätigte Reservation
+    aber nicht rückgängig. Wiederholtes Bestätigen versendet keine weiteren
+    Mails. Es gibt keine automatische Wiederholung fehlgeschlagener finaler
+    Mails und keine Zustellstatus-Anzeige im Admin-Bereich; ein Provider-Erfolg
+    bedeutet Annahme zum Versand, nicht garantierte Zustellung.
+
+    Isolierte Backend-Tests mit In-Memory-Datenbanken und gemocktem Mailversand
+    (keine `.env`, keine Workspace-Datenbank, keine echten Mails, kein Start
+    der Anwendung; API-Tests nutzen nur einen lokalen Test-HTTP-Server):
+
+    ```bash
+    node --test server/*.test.js
+    npm run lint
+    ```
 
 6. **Veröffentlichen:**
    ```bash
@@ -135,7 +170,8 @@ fly ssh console -C "node server/db/seedAdmin.js <benutzername> <passwort>"
 Falls der App-Name in Schritt 3 angepasst wurde, muss zusätzlich `CLIENT_ORIGIN`
 in `fly.toml` unter `[env]` auf die tatsächliche Adresse (`https://<app-name>.fly.dev`
 oder die eigene Domain) angepasst werden - das ist wichtig, damit CORS korrekt
-funktioniert und die Links in den Benachrichtigungsmails stimmen.
+funktioniert. Für die Links in Benachrichtigungsmails separat `PUBLIC_URL`
+auf die einzelne öffentliche Basis-URL setzen.
 
 ### Updates veröffentlichen
 
@@ -162,19 +198,72 @@ https://fly.io/dashboard die Rechnung/Nutzung zu prüfen.
 
 ### Admin-Bereich: Reservationen verwalten
 
-Im Tab "Reservationen" (`/admin`) sieht die Kirche alle Buchungen:
+Unter `/admin` sieht das Sekretariat die Führungen mit ihren Reservationen:
 
-- Neue Reservationen der letzten 24 Stunden werden mit einem "Neu"-Badge
-  markiert, zusätzlich zeigt der Tab-Titel die Anzahl neuer Reservationen an.
+- Eine Führung öffnen, um Namen und Kontaktdaten zu sehen. Die Suche unterstützt
+  Namen, E-Mail, Telefon und Datum. Für stornierte Führungen den Filter "Alle" wählen.
+- Neue Reservationen der letzten 24 Stunden werden markiert; das bedeutet nicht
+  "ungelesen". Kennzahlen unterscheiden Reservationen und reservierte Personen.
+- Platzanzahl nur über "Speichern" ändern. Stornieren erfordert eine Bestätigung;
+  Gäste müssen selbst informiert werden, es gibt keine automatische Absage-Mail.
+- Die aufklappbare Kurzhilfe erklärt diese Abläufe direkt in der Verwaltung.
 - Die Liste aktualisiert sich automatisch alle 30 Sekunden, zusätzlich gibt
   es einen manuellen "Aktualisieren"-Button.
-- Über "Als Excel herunterladen" lässt sich die aktuelle Liste als `.xlsx`-Datei
+- Über "Als Excel herunterladen" lassen sich alle Reservationen der angezeigten
+  Führungen (einschliesslich stornierter Reservationen) als `.xlsx`-Datei
   herunterladen (öffnet direkt in Excel/LibreOffice/Numbers, z.B. zum
   Ausdrucken oder Weiterverarbeiten).
-- Zusätzlich erhält die hinterlegte `NOTIFY_EMAIL`-Adresse bei jeder neuen
-  Reservation automatisch eine E-Mail-Benachrichtigung (siehe Setup-Schritt
-  5b weiter oben) - die Kirche muss also nicht aktiv auf der Seite
-  nachschauen.
+- Zusätzlich wird erst nach E-Mail-Bestätigung eine Benachrichtigung an
+  `NOTIFY_EMAIL` versucht (siehe Setup-Schritt 5b). Der Admin-Bereich bleibt
+  die verlässliche Übersicht der gespeicherten Reservationen, auch bei
+  Mailfehlern.
+
+### Backend-Vertrag: E-Mail-Bestätigung
+
+- `POST /api/bookings` mit `{tourId, name, email, phone, groupSize, isSchoolClass,
+  note}` reserviert atomar eine ganzzahlige Anzahl Plätze. Erst nachdem Resend
+  die Verifikationsmail angenommen hat, folgt `201 {id, status: "pending",
+  message}`. Bei fehlender Mailkonfiguration oder Versandfehler folgt `503`
+  statt einer Erfolgsmeldung; die Reservation bleibt als `cancelled` erhalten.
+- Der Mail-Link lautet
+  `${PUBLIC_URL}/reservation/bestaetigen#token=<hex>`. Der Token besteht aus
+  32 kryptografisch zufälligen Bytes (`randomBytes`), hexadezimal codiert.
+  Das Frontend liest das Fragment und sendet erst nach einer ausdrücklichen
+  Benutzeraktion `POST /api/bookings/confirm` mit `{token}`. Ein GET oder das
+  blosse Öffnen des Links bestätigt nichts.
+- Erfolgreiche Bestätigung und Wiederholungen liefern `200 {status:
+  "confirmed", message}`. Ungültige Tokens liefern `400`, abgelaufene
+  Reservationen `410`, stornierte Reservationen/Führungen `409`, jeweils mit
+  `{error}`. Bereits bestätigte Tokens bleiben auch nach der ursprünglichen
+  Frist idempotent gültig, solange weder die Reservation noch die Führung
+  storniert ist.
+- Zustände: `pending`, `confirmed`, `cancelled`, `expired`.
+  `tours.booked_count` und API-`bookedCount` umfassen vorläufig gehaltene plus
+  bestätigte Plätze. `GET /api/admin/tours` liefert zusätzlich `pendingCount`
+  als Personenzahl; bestätigte Plätze sind `bookedCount - pendingCount`.
+- Dieselbe transaktionale Bereinigung läuft vor öffentlicher Verfügbarkeit,
+  Erstellung, Bestätigung und Admin-Zählungen/Änderungen sowie beim Start und
+  jede Minute. Sie setzt fällige `pending` auf `expired` und gibt Plätze genau
+  einmal frei. Kapazität darf nur ganzzahlig und nicht kleiner als gehaltene
+  plus bestätigte Plätze sein. Löschen ist bei `pending` oder `confirmed`
+  blockiert. Stornieren einer einzelnen Reservation gibt aktive Plätze
+  einmal frei; abgelaufene Reservationen werden nicht erneut abgezogen.
+  Stornieren einer Führung setzt dagegen nur deren Sperrflag: Reservationen
+  und belegte Plätze bleiben erhalten, neue Buchungen und Bestätigungen sind
+  gesperrt. Ausstehende Bestätigungen verfallen weiterhin regulär nach 30
+  Minuten. Reaktivieren vor Ablauf ermöglicht deren Bestätigung wieder;
+  bereits bestätigte Reservationen bleiben unverändert.
+- Additive SQLite-Migration beim Datenbankimport: nullable
+  `bookings.verification_token_hash TEXT` (SHA-256, eindeutiger Index) und
+  `bookings.verification_expires_at INTEGER` (Epoch-Millisekunden, Index für
+  ausstehende Abläufe). Bestehende bestätigte Buchungen und Platzzahlen bleiben
+  unverändert. Neue API-Buchungen setzen den Status ausdrücklich auf `pending`.
+  Der Klartext-Token wird nicht gespeichert. Keine API-Antwort, auch nicht
+  Admin-JSON, enthält Token oder Hash; die Ablaufzeit darf sichtbar sein.
+- Die finalen Mailfunktionen werden nur beim atomaren Übergang zu `confirmed`
+  aufgerufen. Es gibt keine persistente Mail-Warteschlange: Ein Prozessabbruch
+  zwischen Bestätigung und Mailversand kann die finalen Mails verhindern;
+  erneutes Bestätigen versendet sie bewusst nicht nochmals.
 
 ---
 

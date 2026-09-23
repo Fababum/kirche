@@ -27,8 +27,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-please-change-me-in-.env}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:4001}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      MAIL_FROM: ${MAIL_FROM:-Osterweg Wyland <onboarding@resend.dev>}
+      PUBLIC_URL: ${PUBLIC_URL:-https://osterweg-wyland.com}
+      MAIL_FROM: ${MAIL_FROM:-Osterweg Wyland <noreply@osterweg-wyland.com>}
       NOTIFY_EMAIL: ${NOTIFY_EMAIL:-}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
     volumes:
       - osterweg_data:/app/server/data
 

@@ -18,11 +18,21 @@ function Footer() {
           {' · '}
           <a href="/admin">Admin</a>
         </p>
-        <nav className="site-footer__legal" aria-label="Rechtliches">
-          <a href="/impressum">Impressum</a>
-          <a href="/datenschutz">Datenschutz</a>
-        </nav>
-        <p className="site-footer__copy">{footerInfo.copyright}</p>
+        <div className="site-footer__bottom">
+          <div>
+            <nav className="site-footer__legal" aria-label="Rechtliches">
+              <a href="/impressum">Impressum</a>
+              <a href="/datenschutz">Datenschutz</a>
+            </nav>
+            <p className="site-footer__copy">{footerInfo.copyright}</p>
+          </div>
+          <a className="site-footer__church" href="https://www.kirche-wm.ch/"
+            target="_blank" rel="noopener noreferrer"
+            aria-label="Offizielle Website der reformierten Kirche Weinland Mitte (neuer Tab)">
+            <img src="/images/logo.png" alt="Reformierte Kirche Weinland Mitte"
+              width="595" height="207" loading="lazy" />
+          </a>
+        </div>
       </div>
     </footer>
   );

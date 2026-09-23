@@ -1,19 +1,27 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../api';
 import ConfirmDialog from './ConfirmDialog';
 import AdminStats from './AdminStats';
-import { downloadBookingsExcel } from './exportExcel';
+import { BOOKING_STATUS_LABELS, downloadBookingsExcel } from './exportExcel';
 
 const AUTO_REFRESH_MS = 30000;
 const NEW_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
+function isActiveBooking(booking) {
+  return booking.status === 'confirmed' || booking.status === 'pending';
+}
+
 function isNewBooking(booking) {
-  const created = new Date(booking.created_at).getTime();
-  return Number.isFinite(created) && Date.now() - created < NEW_THRESHOLD_MS;
+  if (booking.status !== 'confirmed') return false;
+  const timestamp = booking.created_at;
+  const created = new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(timestamp)
+    ? `${timestamp.replace(' ', 'T')}Z` : timestamp).getTime();
+  const age = Date.now() - created;
+  return Number.isFinite(created) && age >= 0 && age < NEW_THRESHOLD_MS;
 }
 
 function formatTimestamp(date) {
-  return date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' });
 }
 
 function formatDateLabel(iso) {
@@ -47,8 +55,8 @@ function buildSchedule(tours, bookings) {
 
 function matchesSearch(entry, query) {
   if (!query) return true;
-  const q = query.toLowerCase();
-  const inTour = `${entry.date} ${entry.time}`.toLowerCase().includes(q);
+  const q = query.trim().toLowerCase();
+  const inTour = `${entry.date} ${formatDateLabel(entry.date)} ${entry.time}`.toLowerCase().includes(q);
   const inBookings = entry.bookings.some((b) =>
     `${b.name} ${b.email} ${b.phone || ''}`.toLowerCase().includes(q)
   );
@@ -67,12 +75,17 @@ function AdminSchedule() {
   const [expanded, setExpanded] = useState(() => new Set());
   const [pendingCancelBooking, setPendingCancelBooking] = useState(null);
   const [pendingDeleteTour, setPendingDeleteTour] = useState(null);
+  const [pendingToggleTour, setPendingToggleTour] = useState(null);
+  const [capacityDraft, setCapacityDraft] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [exporting, setExporting] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newTour, setNewTour] = useState({ date: '', time: '', capacity: 15 });
   const [actionError, setActionError] = useState('');
 
   function reload() {
+    setLoading(true);
     setReloadKey((k) => k + 1);
   }
 
@@ -86,7 +99,7 @@ function AdminSchedule() {
         setError('');
         setLastUpdated(new Date());
       })
-      .catch((err) => !cancelled && setError(err.message))
+      .catch(() => !cancelled && setError('Die Daten konnten nicht geladen werden. Bitte prüfen Sie die Verbindung und versuchen Sie es erneut.'))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -102,7 +115,7 @@ function AdminSchedule() {
 
   const schedule = useMemo(() => buildSchedule(tours, bookings), [tours, bookings]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' });
 
   const filtered = schedule
     .filter((entry) => {
@@ -113,7 +126,8 @@ function AdminSchedule() {
     .filter((entry) => matchesSearch(entry, search))
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-  const newCount = bookings.filter((b) => b.status !== 'cancelled' && isNewBooking(b)).length;
+  const newCount = schedule.filter((tour) => !tour.isCancelled)
+    .flatMap((tour) => tour.bookings).filter(isNewBooking).length;
 
   function toggleExpand(tourId) {
     setExpanded((prev) => {
@@ -126,77 +140,139 @@ function AdminSchedule() {
 
   async function confirmCancelBooking() {
     if (!pendingCancelBooking) return;
-    await api.updateBooking(pendingCancelBooking.id, { status: 'cancelled' });
+    const booking = bookings.find((b) => b.id === pendingCancelBooking.id);
+    if (!booking || !isActiveBooking(booking)) {
+      setPendingCancelBooking(null);
+      return;
+    }
+    await api.updateBooking(booking.id, { status: 'cancelled' });
+    setBookings((prev) => prev.map((b) => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
+    setTours((prev) => prev.map((tour) => tour.id === booking.tour_id
+      ? { ...tour, bookedCount: Math.max(0, tour.bookedCount - booking.group_size) } : tour));
     setPendingCancelBooking(null);
     reload();
   }
 
-  async function toggleCancelTour(tour) {
+  async function confirmToggleTour() {
+    const tour = pendingToggleTour;
+    if (!tour) return;
     await api.updateTour(tour.id, { isCancelled: !tour.isCancelled });
+    setTours((prev) => prev.map((entry) => entry.id === tour.id ? { ...entry, isCancelled: !tour.isCancelled } : entry));
+    setPendingToggleTour(null);
     reload();
   }
 
-  async function changeCapacity(tour, capacity) {
-    await api.updateTour(tour.id, { capacity });
-    reload();
+  async function saveCapacity(e, tour) {
+    e.preventDefault();
+    if (savingRef.current) return;
+    const capacity = Number(capacityDraft.value);
+    const minimum = Math.max(1, tour.bookedCount);
+    if (!Number.isSafeInteger(capacity) || capacity < minimum) {
+      setActionError(`Bitte geben Sie eine ganze Platzanzahl von mindestens ${minimum} ein. Bestätigte und bis zur E-Mail-Bestätigung gehaltene Plätze müssen erhalten bleiben.`);
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setActionError('');
+    try {
+      await api.updateTour(tour.id, { capacity });
+      setTours((prev) => prev.map((entry) => entry.id === tour.id ? { ...entry, capacity } : entry));
+      setCapacityDraft(null);
+      reload();
+    } catch (err) {
+      setActionError(`Die Platzanzahl wurde nicht gespeichert. Bitte versuchen Sie es erneut. ${err.message || ''}`);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   async function confirmDeleteTour() {
     if (!pendingDeleteTour) return;
-    try {
-      await api.deleteTour(pendingDeleteTour.id);
-      setPendingDeleteTour(null);
-      setActionError('');
-      reload();
-    } catch (err) {
-      setActionError(err.message);
-      setPendingDeleteTour(null);
-    }
+    await api.deleteTour(pendingDeleteTour.id);
+    setTours((prev) => prev.filter((tour) => tour.id !== pendingDeleteTour.id));
+    if (capacityDraft?.id === pendingDeleteTour.id) setCapacityDraft(null);
+    setPendingDeleteTour(null);
+    reload();
   }
 
   async function handleCreateTour(e) {
     e.preventDefault();
+    if (savingRef.current) return;
+    const capacity = Number(newTour.capacity);
+    if (!Number.isSafeInteger(capacity) || capacity < 1) {
+      setActionError('Bitte geben Sie eine ganze Platzanzahl von mindestens 1 ein.');
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setActionError('');
     try {
-      await api.createTour(newTour);
+      await api.createTour({ ...newTour, capacity });
       setNewTour({ date: '', time: '', capacity: 15 });
       setShowNewForm(false);
       reload();
     } catch (err) {
-      setActionError(err.message);
+      setActionError(`Die Führung konnte nicht angelegt werden. Bitte prüfen Sie Ihre Eingaben und die Verbindung. ${err.message || ''}`);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
   async function handleExport() {
     setExporting(true);
+    setActionError('');
     try {
       const allBookingsInView = filtered.flatMap((entry) => entry.bookings);
       await downloadBookingsExcel(allBookingsInView);
+    } catch (err) {
+      setActionError(`Die Excel-Datei konnte nicht erstellt werden. Bitte versuchen Sie es erneut. ${err.message || ''}`);
     } finally {
       setExporting(false);
     }
   }
 
-  if (loading) return <p>Lädt …</p>;
-  if (error) return <p className="admin-error">{error}</p>;
+  if (loading && !lastUpdated) return <p role="status">Führungen und Reservationen werden geladen …</p>;
 
   return (
-    <div>
-      <AdminStats bookings={bookings} />
+    <div className="admin-schedule">
+      {error && (
+        <div className="admin-error" role="alert">
+          <p>{error} {lastUpdated && 'Die zuletzt geladenen Daten bleiben sichtbar und sind möglicherweise nicht aktuell.'}</p>
+          <button type="button" className="btn btn--outline" onClick={reload} disabled={loading}>
+            {loading ? 'Wird geladen …' : 'Erneut versuchen'}
+          </button>
+        </div>
+      )}
+      {lastUpdated && <>
+      <details className="admin-schedule__help">
+        <summary>Kurzhilfe für das Sekretariat</summary>
+        <ul>
+          <li><strong>Reservation finden:</strong> Nach Name, Datum, E-Mail oder Telefon suchen. Für stornierte oder ältere Führungen den Filter «Alle» wählen.</li>
+          <li><strong>Zahlen verstehen:</strong> Eine Reservation kann mehrere Personen umfassen. Die Kennzahlen und «Neu» zählen nur bestätigte Reservationen auf nicht stornierten Führungen. «Neu» bedeutet: in den letzten 24 Stunden eingegangen. Die belegten Plätze einer Führung enthalten auch vorläufig gehaltene Plätze.</li>
+          <li><strong>E-Mail-Bestätigung:</strong> Ausstehende Reservationen halten Plätze für 30 Minuten frei. Die buchende Person muss den Link in ihrer E-Mail öffnen. Ohne Bestätigung verfällt die Reservation automatisch und die Plätze werden freigegeben. Das Sekretariat bestätigt Reservationen nicht manuell.</li>
+          <li><strong>Plätze ändern:</strong> Führung öffnen, «Platzanzahl ändern» wählen und ausdrücklich speichern. Abbrechen verwirft die Eingabe.</li>
+          <li><strong>Absagen mitteilen:</strong> Beim Stornieren werden keine automatischen E-Mails versendet. Betroffene bitte selbst per E-Mail oder Telefon informieren. Bei einer stornierten Führung bleiben die Reservationen bestehen.</li>
+          <li><strong>Excel:</strong> Enthält alle Reservationen der angezeigten Führungen mit ihrem Status, auch ausstehende, abgelaufene, stornierte und nicht einzeln zur Suche passende Reservationen.</li>
+        </ul>
+      </details>
+      <AdminStats bookings={bookings} tours={tours} />
 
       <div className="admin-bookings__toolbar">
         <div className="admin-bookings__status">
           {newCount > 0 && (
-            <span className="admin-badge admin-badge--new">{newCount} neu (24h)</span>
+            <span className="admin-badge admin-badge--new">{newCount} neue Reservationen (24h)</span>
           )}
           {lastUpdated && (
             <span className="admin-bookings__updated">
-              Zuletzt aktualisiert um {formatTimestamp(lastUpdated)}
+              Zuletzt aktualisiert um {formatTimestamp(lastUpdated)} · automatisch alle 30 Sekunden
             </span>
           )}
         </div>
         <div className="admin-bookings__actions">
-          <button type="button" className="btn btn--outline" onClick={reload}>
-            Aktualisieren
+          <button type="button" className="btn btn--outline" onClick={reload} disabled={loading}>
+            {loading ? 'Wird aktualisiert …' : 'Aktualisieren'}
           </button>
           <button
             type="button"
@@ -210,18 +286,25 @@ function AdminSchedule() {
       </div>
 
       <div className="admin-filterbar">
+        <label className="admin-schedule__search-label">
+          Reservation finden: Name, Datum oder Kontakt
         <input
           type="search"
           className="admin-filterbar__search"
           placeholder="Suchen nach Name, E-Mail, Telefon oder Datum …"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Führungen und Reservationen durchsuchen"
+          onChange={(e) => {
+            const query = e.target.value;
+            setSearch(query);
+            if (query.trim()) setExpanded(new Set(schedule.filter((entry) => matchesSearch(entry, query)).map((entry) => entry.id)));
+          }}
         />
+        </label>
         <div className="admin-filterbar__chips" role="group" aria-label="Zeitraum filtern">
           <button
             type="button"
             className={timeFilter === 'upcoming' ? 'active' : ''}
+            aria-pressed={timeFilter === 'upcoming'}
             onClick={() => setTimeFilter('upcoming')}
           >
             Kommende
@@ -229,6 +312,7 @@ function AdminSchedule() {
           <button
             type="button"
             className={timeFilter === 'all' ? 'active' : ''}
+            aria-pressed={timeFilter === 'all'}
             onClick={() => setTimeFilter('all')}
           >
             Alle
@@ -236,14 +320,26 @@ function AdminSchedule() {
           <button
             type="button"
             className={timeFilter === 'past' ? 'active' : ''}
+            aria-pressed={timeFilter === 'past'}
             onClick={() => setTimeFilter('past')}
           >
             Vergangen
           </button>
         </div>
       </div>
+      <p className="admin-schedule__results" role="status">
+        {filtered.length} {filtered.length === 1 ? 'Führung' : 'Führungen'} im gewählten Zeitraum{search.trim() ? ' passend zur Suche' : ''}. Die Suche zeigt jeweils die ganze Führung mit allen Reservationen.
+      </p>
 
-      {actionError && <p className="admin-error">{actionError}</p>}
+      {actionError && <p className="admin-error" role="alert">{actionError}</p>}
+      {capacityDraft && (
+        <p className="admin-schedule__draft-notice">
+          Eine Platzanzahl wird bearbeitet. Sie wird erst mit «Speichern» übernommen.{' '}
+          <button type="button" className="btn btn--outline btn--sm" disabled={saving} onClick={() => { setCapacityDraft(null); setActionError(''); }}>
+            Platzänderung verwerfen
+          </button>
+        </p>
+      )}
 
       <div className="admin-schedule__new">
         {showNewForm ? (
@@ -253,6 +349,7 @@ function AdminSchedule() {
                 Datum
                 <input
                   type="date"
+                  disabled={saving}
                   required
                   value={newTour.date}
                   onChange={(e) => setNewTour({ ...newTour, date: e.target.value })}
@@ -262,27 +359,32 @@ function AdminSchedule() {
                 Uhrzeit
                 <input
                   type="time"
+                  disabled={saving}
                   required
                   value={newTour.time}
                   onChange={(e) => setNewTour({ ...newTour, time: e.target.value })}
                 />
               </label>
               <label>
-                Kapazität
+                Plätze insgesamt (Personen)
                 <input
                   type="number"
                   min={1}
+                  step={1}
+                  required
+                  disabled={saving}
                   value={newTour.capacity}
                   onChange={(e) => setNewTour({ ...newTour, capacity: e.target.value })}
                 />
               </label>
-              <button type="submit" className="btn btn--primary">
-                Anlegen
+              <button type="submit" className="btn btn--primary" disabled={saving}>
+                {saving ? 'Wird gespeichert …' : 'Anlegen'}
               </button>
               <button
                 type="button"
                 className="btn btn--outline"
                 onClick={() => setShowNewForm(false)}
+                disabled={saving}
               >
                 Abbrechen
               </button>
@@ -305,8 +407,10 @@ function AdminSchedule() {
         <div className="admin-schedule__list">
           {filtered.map((tour) => {
             const isOpen = expanded.has(tour.id);
-            const activeBookings = tour.bookings.filter((b) => b.status !== 'cancelled');
-            const tourNewCount = activeBookings.filter(isNewBooking).length;
+            const activeBookings = tour.bookings.filter(isActiveBooking);
+            const confirmedCount = tour.bookings.filter((b) => b.status === 'confirmed').length;
+            const pendingCount = tour.bookings.filter((b) => b.status === 'pending').length;
+            const tourNewCount = tour.isCancelled ? 0 : tour.bookings.filter(isNewBooking).length;
 
             return (
               <div
@@ -327,10 +431,10 @@ function AdminSchedule() {
                   <span className="admin-schedule__date">{formatDateLabel(tour.date)}</span>
                   <span className="admin-schedule__time">{tour.time} Uhr</span>
                   <span className="admin-schedule__count">
-                    {tour.bookedCount} / {tour.capacity} Personen
+                    {tour.bookedCount} / {tour.capacity} Plätze belegt (inkl. vorläufig gehalten) · {confirmedCount} bestätigte Reservationen · {pendingCount} E-Mail-Bestätigungen ausstehend
                   </span>
                   {tourNewCount > 0 && (
-                    <span className="admin-badge admin-badge--new">{tourNewCount} neu</span>
+                    <span className="admin-badge admin-badge--new">{tourNewCount} neu (24h)</span>
                   )}
                   <span
                     className={`admin-status-pill ${
@@ -344,23 +448,37 @@ function AdminSchedule() {
                 {isOpen && (
                   <div className="admin-schedule__details">
                     <div className="admin-schedule__tour-actions">
-                      <label className="admin-schedule__capacity-label">
-                        Kapazität:{' '}
+                      {capacityDraft?.id === tour.id ? (
+                        <form className="admin-schedule__capacity-form" onSubmit={(e) => saveCapacity(e, tour)}>
+                        <label className="admin-schedule__capacity-label">
+                        Plätze insgesamt (Personen):{' '}
                         <input
                           type="number"
-                          min={tour.bookedCount}
-                          defaultValue={tour.capacity}
+                          min={Math.max(1, tour.bookedCount)}
+                          step={1}
+                          required
+                          disabled={saving}
+                          value={capacityDraft.value}
                           className="admin-table__capacity-input"
-                          onBlur={(e) => {
-                            const val = Number(e.target.value);
-                            if (val !== tour.capacity) changeCapacity(tour, val);
-                          }}
+                          onChange={(e) => setCapacityDraft({ id: tour.id, value: e.target.value })}
                         />
-                      </label>
+                        </label>
+                        <span>Mindestens {Math.max(1, tour.bookedCount)} Plätze; {tour.bookedCount} bestätigt oder bis zur E-Mail-Bestätigung gehalten.</span>
+                        <button type="submit" className="btn btn--primary btn--sm" disabled={saving}>
+                          {saving ? 'Wird gespeichert …' : 'Speichern'}
+                        </button>
+                        <button type="button" className="btn btn--outline btn--sm" disabled={saving} onClick={() => { setCapacityDraft(null); setActionError(''); }}>Abbrechen</button>
+                        </form>
+                      ) : (
+                        <button type="button" className="btn btn--outline btn--sm" disabled={saving || Boolean(capacityDraft)} onClick={() => { setActionError(''); setCapacityDraft({ id: tour.id, value: String(tour.capacity) }); }}>
+                          Platzanzahl ändern
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn btn--outline btn--sm"
-                        onClick={() => toggleCancelTour(tour)}
+                        disabled={saving}
+                        onClick={() => setPendingToggleTour(tour)}
                       >
                         {tour.isCancelled ? 'Führung reaktivieren' : 'Führung stornieren'}
                       </button>
@@ -368,10 +486,18 @@ function AdminSchedule() {
                         type="button"
                         className="btn btn--outline btn--sm btn--danger-outline"
                         onClick={() => setPendingDeleteTour(tour)}
+                        disabled={saving}
                       >
                         Führung löschen
                       </button>
                     </div>
+
+                    {tour.isCancelled && activeBookings.length > 0 && (
+                      <p className="admin-error" role="status">
+                        Diese Führung ist storniert. {activeBookings.length} aktive Reservationen bestehen noch ({confirmedCount} bestätigt, {pendingCount} E-Mail-Bestätigungen ausstehend).
+                        Bitte die betroffenen Personen kontaktieren und die Reservationen einzeln klären.
+                      </p>
+                    )}
 
                     {tour.bookings.length === 0 ? (
                       <p className="admin-empty admin-empty--compact">
@@ -388,9 +514,9 @@ function AdminSchedule() {
                           >
                             <div className="admin-schedule__booking-main">
                               <strong>{b.name}</strong>
-                              {isNewBooking(b) && b.status !== 'cancelled' && (
+                              {isNewBooking(b) && !tour.isCancelled && (
                                 <span className="admin-badge admin-badge--new admin-badge--inline">
-                                  Neu
+                                  Neu (24h)
                                 </span>
                               )}
                               {b.is_school_class ? (
@@ -402,29 +528,39 @@ function AdminSchedule() {
                             </div>
                             <div className="admin-schedule__booking-contact">
                               <a href={`mailto:${b.email}`}>{b.email}</a>
-                              {b.phone && <span> · {b.phone}</span>}
+                              {b.phone && <span> · <a href={`tel:${b.phone.replace(/[^+\d]/g, '')}`}>{b.phone}</a></span>}
                             </div>
                             {b.note && <p className="admin-schedule__booking-note">„{b.note}"</p>}
                             <div className="admin-schedule__booking-actions">
                               <span
                                 className={`admin-status-pill ${
-                                  b.status === 'cancelled'
-                                    ? 'admin-status-pill--cancelled'
-                                    : 'admin-status-pill--ok'
+                                  b.status === 'confirmed' ? 'admin-status-pill--ok'
+                                    : b.status === 'pending' ? 'admin-status-pill--pending'
+                                      : b.status === 'cancelled' ? 'admin-status-pill--cancelled'
+                                        : 'admin-status-pill--expired'
                                 }`}
                               >
-                                {b.status === 'cancelled' ? 'Storniert' : 'Bestätigt'}
+                                {BOOKING_STATUS_LABELS[b.status] || 'Unbekannter Status'}
                               </span>
-                              {b.status !== 'cancelled' && (
+                              {isActiveBooking(b) && (
                                 <button
                                   type="button"
                                   className="btn btn--outline btn--sm btn--danger-outline"
                                   onClick={() => setPendingCancelBooking(b)}
+                                  disabled={saving}
                                 >
-                                  Stornieren
+                                  {b.status === 'pending' ? 'Gehaltene Plätze freigeben' : 'Stornieren'}
                                 </button>
                               )}
                             </div>
+                            {b.status === 'pending' && Number.isFinite(b.verification_expires_at) && (
+                              <p className="admin-schedule__booking-expiry">
+                                Bestätigungsfrist: {new Date(b.verification_expires_at).toLocaleString('de-CH', {
+                                  day: '2-digit', month: '2-digit', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich',
+                                })} Uhr (Schweizer Zeit). Danach werden die Plätze automatisch freigegeben.
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -436,19 +572,32 @@ function AdminSchedule() {
           })}
         </div>
       )}
+      </>}
 
       <ConfirmDialog
         open={Boolean(pendingCancelBooking)}
-        title="Reservation stornieren?"
+        title={pendingCancelBooking?.status === 'pending' ? 'Gehaltene Plätze freigeben?' : 'Reservation stornieren?'}
         message={
           pendingCancelBooking
-            ? `Die Reservation von ${pendingCancelBooking.name} wird storniert. Das kann nicht rückgängig gemacht werden.`
+            ? `Die ${pendingCancelBooking.status === 'pending' ? 'noch nicht per E-Mail bestätigte' : 'bestätigte'} Reservation von ${pendingCancelBooking.name} für ${pendingCancelBooking.group_size} Personen am ${formatDateLabel(pendingCancelBooking.tour_date)} um ${pendingCancelBooking.tour_time} Uhr wird storniert. ${pendingCancelBooking.status === 'pending' ? 'Die vorläufig gehaltenen Plätze werden sofort freigegeben; die Reservation kann danach nicht mehr per E-Mail bestätigt werden.' : 'Die Plätze werden freigegeben.'} Das kann hier nicht rückgängig gemacht werden. Es wird KEINE automatische E-Mail versendet. Bitte informieren Sie die betroffene Person selbst.`
             : ''
         }
-        confirmLabel="Ja, stornieren"
+        confirmLabel={pendingCancelBooking?.status === 'pending' ? 'Ja, Plätze freigeben' : 'Ja, stornieren'}
         danger
         onConfirm={confirmCancelBooking}
         onCancel={() => setPendingCancelBooking(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingToggleTour)}
+        title={pendingToggleTour?.isCancelled ? 'Führung reaktivieren?' : 'Führung stornieren?'}
+        message={pendingToggleTour
+          ? `Die Führung vom ${formatDateLabel(pendingToggleTour.date)} um ${pendingToggleTour.time} Uhr wird ${pendingToggleTour.isCancelled ? 'wieder zur Buchung freigegeben' : 'storniert und ist nicht mehr buchbar'}. ${bookings.filter((b) => b.tour_id === pendingToggleTour.id && isActiveBooking(b)).length} aktive Reservationen (bestätigt oder E-Mail-Bestätigung ausstehend) bleiben bestehen; ausstehende Bestätigungen verfallen weiterhin nach 30 Minuten. Es wird KEINE automatische E-Mail versendet. Bitte informieren Sie die betroffenen Personen selbst.`
+          : ''}
+        confirmLabel={pendingToggleTour?.isCancelled ? 'Ja, reaktivieren' : 'Ja, Führung stornieren'}
+        danger={!pendingToggleTour?.isCancelled}
+        onConfirm={confirmToggleTour}
+        onCancel={() => setPendingToggleTour(null)}
       />
 
       <ConfirmDialog
@@ -456,7 +605,7 @@ function AdminSchedule() {
         title="Führung löschen?"
         message={
           pendingDeleteTour
-            ? `Die Führung vom ${pendingDeleteTour.date} um ${pendingDeleteTour.time} Uhr wird endgültig gelöscht.`
+            ? `Die Führung vom ${formatDateLabel(pendingDeleteTour.date)} um ${pendingDeleteTour.time} Uhr wird endgültig gelöscht. Das ist nur ohne bestätigte Reservationen und ohne ausstehende E-Mail-Bestätigungen möglich. Bereits stornierte und abgelaufene Reservationen werden ebenfalls gelöscht. Möchten Sie die Daten behalten, stornieren Sie stattdessen die Führung.`
             : ''
         }
         confirmLabel="Ja, löschen"

@@ -19,7 +19,8 @@ primary_region = 'fra'
   # Muss auf die echte(n) Domain(s) der Seite zeigen, damit CORS in
   # Produktion korrekt funktioniert. Mehrere Domains kommagetrennt möglich.
   CLIENT_ORIGIN = 'https://osterweg-wyland.com,https://www.osterweg-wyland.com,https://osterweg-wyland.fly.dev'
-  MAIL_FROM = 'Osterweg Wyland <onboarding@resend.dev>'
+  PUBLIC_URL = 'https://osterweg-wyland.com'
+  MAIL_FROM = 'Osterweg Wyland <noreply@osterweg-wyland.com>'
 
 [[mounts]]
   source = 'osterweg_data'

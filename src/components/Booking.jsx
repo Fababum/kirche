@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { registrationInfo } from '../data/content';
 import { api } from '../api';
+import SchoolClassContact from './SchoolClassContact';
 import './Booking.css';
 
 const START_DATE = '2027-03-13';
@@ -10,11 +11,11 @@ const WEEKDAY_LABELS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 function buildDateList(start, end) {
   const dates = [];
-  let current = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
+  const current = new Date(`${start}T00:00:00Z`);
+  const last = new Date(`${end}T00:00:00Z`);
   while (current <= last) {
     dates.push(current.toISOString().slice(0, 10));
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
   return dates;
 }
@@ -97,11 +98,13 @@ function Booking() {
         groupSize: Number(form.groupSize),
       });
       setSuccessMessage(result.message);
-      // Aktualisiere die Slot-Liste, damit freie Plätze sofort aktuell sind.
-      const updated = await api.getTours(START_DATE, END_DATE);
-      setTours(updated);
       setSelectedTour(null);
+      setSelectedDate(null);
       setForm({ name: '', email: '', phone: '', groupSize: 5, isSchoolClass: false });
+      // A refresh failure must not look like a failed booking and invite duplicates.
+      api.getTours(START_DATE, END_DATE).then(setTours).catch(() => {
+        setError('Die verfügbaren Plätze konnten nicht aktualisiert werden. Bitte lade die Seite neu. Deine E-Mail-Bestätigung steht weiterhin aus.');
+      });
     } catch (err) {
       setSubmitError(err.message);
     } finally {
@@ -113,12 +116,20 @@ function Booking() {
     <section id="reservieren" className="section section--warm booking">
       <div className="container">
         <div className="section-heading">
-          <h2>{registrationInfo.heading}</h2>
+          <h1>{registrationInfo.heading}</h1>
         </div>
 
         <p className="booking__notice">
           {registrationInfo.notice} {registrationInfo.accessibility}
         </p>
+        <p className="booking__notice">Nach der Anmeldung erhältst du eine E-Mail. Bitte bestätige deine Adresse innerhalb von 30 Minuten, damit die Reservation gültig wird.</p>
+        {successMessage && (
+          <div className="booking__pending" role="status">
+            <h2>Bitte E-Mail bestätigen</h2>
+            <p>{successMessage}</p>
+            <p>Prüfe auch den Spamordner. Ohne Bestätigung werden die Plätze nach 30 Minuten wieder freigegeben. Bei einer falschen Adresse kannst du die Anmeldung erneut ausfüllen.</p>
+          </div>
+        )}
 
         {loading && <p>Führungen werden geladen …</p>}
         {error && <p className="booking__error">{error}</p>}
@@ -155,7 +166,7 @@ function Booking() {
           </div>
         )}
 
-        {selectedDate && (
+        {selectedDate && !error && (
           <div className="booking__slots">
             <h3>Verfügbare Führungen am {formatDateLabel(selectedDate)}</h3>
             <div className="booking__slot-list">
@@ -237,13 +248,13 @@ function Booking() {
               Schulklasse
             </label>
             {form.isSchoolClass && (
-              <p className="booking__form-footnote">{registrationInfo.schoolClasses}</p>
+              <p className="booking__form-footnote"><SchoolClassContact /></p>
             )}
 
             {submitError && <p className="booking__error">{submitError}</p>}
 
             <button type="submit" className="btn btn--primary" disabled={submitting}>
-              {submitting ? 'Wird gesendet …' : 'Jetzt reservieren'}
+              {submitting ? 'Wird gesendet …' : 'Bestätigungs-E-Mail anfordern'}
             </button>
 
             <p className="booking__form-footnote">
@@ -257,7 +268,6 @@ function Booking() {
           </form>
         )}
 
-        {successMessage && <p className="booking__success">{successMessage}</p>}
       </div>
     </section>
   );

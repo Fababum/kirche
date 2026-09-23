@@ -4,6 +4,7 @@
 // Ausführen mit:  node server/db/seedAdmin.js <benutzername> <passwort>
 // Beispiel:        node server/db/seedAdmin.js susanne "einSicheresPasswort"
 // ============================================================================
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { db } from './database.js';
 

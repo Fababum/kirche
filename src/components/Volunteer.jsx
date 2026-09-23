@@ -8,7 +8,8 @@ function Volunteer() {
     <section id="mitarbeiten" className="section section--gold volunteer">
       <div className="container">
         <div className="section-heading">
-          <h2>Mitmachen</h2>
+          <h2>Mitarbeiten und Teil davon werden</h2>
+          <p>Teil davon werden. Melde dich direkt bei der zuständigen Kontaktperson.</p>
         </div>
 
         <div className="volunteer__grid">
@@ -18,6 +19,7 @@ function Volunteer() {
               <span className="badge">{area.period}</span>
               <p>{area.description}</p>
               <div className="volunteer__contact">
+                <span>Kontakt</span>
                 <strong>{area.contact.name}</strong>
                 {HAS_DIGIT.test(area.contact.phone) ? (
                   <a href={`tel:${area.contact.phone.replace(/\s/g, '')}`}>
@@ -26,6 +28,7 @@ function Volunteer() {
                 ) : (
                   <span className="volunteer__contact-pending">{area.contact.phone}</span>
                 )}
+                {area.contact.email && <a href={`mailto:${area.contact.email}`}>{area.contact.email}</a>}
               </div>
             </div>
           ))}

@@ -4,8 +4,10 @@
 // ============================================================================
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { createHash, randomBytes } from 'node:crypto';
 import { db } from '../db/database.js';
-import { sendChurchNotification, sendVisitorConfirmation } from '../mailer.js';
+import { expirePendingBookings, VERIFICATION_TTL_MS } from '../bookings.js';
+import { sendChurchNotification, sendVisitorConfirmation, sendVisitorVerification } from '../mailer.js';
 
 const router = Router();
 
@@ -23,6 +25,7 @@ const bookingRateLimiter = rateLimit({
 // GET /api/tours?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Liefert alle (nicht stornierten) Slots inkl. freier Plätze im Zeitraum.
 router.get('/tours', (req, res) => {
+  expirePendingBookings();
   const { from, to } = req.query;
 
   let query = 'SELECT * FROM tours WHERE is_cancelled = 0';
@@ -55,7 +58,8 @@ router.get('/tours', (req, res) => {
 
 // POST /api/bookings
 // Body: { tourId, name, email, phone, groupSize, isSchoolClass, note }
-router.post('/bookings', bookingRateLimiter, (req, res) => {
+router.post('/bookings', bookingRateLimiter, async (req, res) => {
+  expirePendingBookings();
   const {
     tourId,
     name,
@@ -91,53 +95,40 @@ router.post('/bookings', bookingRateLimiter, (req, res) => {
   }
 
   const size = Number(groupSize);
-  if (!Number.isFinite(size) || size < 1 || size > 500) {
+  if (!Number.isInteger(size) || size < 1 || size > 500) {
     return res.status(400).json({ error: 'Ungültige Gruppengrösse.' });
   }
 
-  const tour = db.prepare('SELECT * FROM tours WHERE id = ? AND is_cancelled = 0').get(tourId);
-  if (!tour) {
-    return res.status(404).json({ error: 'Führung nicht gefunden.' });
-  }
-
-  const freeSpots = tour.capacity - tour.booked_count;
-  if (size > freeSpots) {
-    return res.status(409).json({
-      error: `Für diese Führung sind nur noch ${freeSpots} Plätze frei.`,
-    });
-  }
-
-  const insertBooking = db.prepare(`
-    INSERT INTO bookings (tour_id, name, email, phone, group_size, is_school_class, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  const updateTour = db.prepare(`
-    UPDATE tours SET booked_count = booked_count + ? WHERE id = ?
-  `);
-
-  const transaction = db.transaction(() => {
-    const result = insertBooking.run(
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const result = db.transaction(() => {
+    expirePendingBookings();
+    const tour = db.prepare('SELECT * FROM tours WHERE id = ? AND is_cancelled = 0').get(tourId);
+    if (!tour) return { code: 404, error: 'Führung nicht gefunden.' };
+    const freeSpots = tour.capacity - tour.booked_count;
+    if (size > freeSpots) {
+      return { code: 409, error: `Für diese Führung sind nur noch ${freeSpots} Plätze frei.` };
+    }
+    const inserted = db.prepare(`
+      INSERT INTO bookings (tour_id, name, email, phone, group_size, is_school_class, note,
+        status, verification_token_hash, verification_expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+    `).run(
       tourId,
       trimmedName,
       trimmedEmail,
       trimmedPhone || null,
       size,
       isSchoolClass ? 1 : 0,
-      trimmedNote || null
+      trimmedNote || null,
+      tokenHash,
+      Date.now() + VERIFICATION_TTL_MS
     );
-    updateTour.run(size, tourId);
-    return result.lastInsertRowid;
-  });
+    db.prepare('UPDATE tours SET booked_count = booked_count + ? WHERE id = ?').run(size, tourId);
+    return { id: inserted.lastInsertRowid, tour };
+  }).immediate();
+  if (result.error) return res.status(result.code).json({ error: result.error });
 
-  const bookingId = transaction();
-
-  res.status(201).json({
-    id: bookingId,
-    message: 'Reservation erfolgreich! Wir freuen uns auf euren Besuch.',
-  });
-
-  // Benachrichtigungen laufen im Hintergrund weiter - ein Mailfehler soll die
-  // bereits gesendete Erfolgsantwort an den Besucher nicht beeinträchtigen.
   const bookingForMail = {
     name: trimmedName,
     email: trimmedEmail,
@@ -146,8 +137,91 @@ router.post('/bookings', bookingRateLimiter, (req, res) => {
     isSchoolClass: !!isSchoolClass,
     note: trimmedNote,
   };
-  sendChurchNotification(bookingForMail, tour);
-  sendVisitorConfirmation(bookingForMail, tour);
+  try {
+    await sendVisitorVerification(bookingForMail, result.tour, token);
+  } catch {
+    // Never hold a SQLite transaction open over network I/O. Compensate atomically;
+    // an expiry/cancellation racing the send must not release these seats twice.
+    db.transaction(() => {
+      expirePendingBookings();
+      const cancelled = db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ? AND status = 'pending'").run(result.id);
+      if (cancelled.changes) {
+        db.prepare('UPDATE tours SET booked_count = booked_count - ? WHERE id = ?').run(size, tourId);
+      }
+    }).immediate();
+    console.error('[bookings] Verifikationsmail konnte nicht gesendet werden.');
+    return res.status(503).json({
+      error: 'Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte prüfe deine E-Mail-Adresse und versuche es erneut oder kontaktiere Susanne Egloff: susanne.egloff@kirche-wm.ch, 052 319 12 73.',
+    });
+  }
+
+  expirePendingBookings();
+  const current = db.prepare('SELECT status FROM bookings WHERE id = ?').get(result.id);
+  if (current?.status === 'expired') {
+    return res.status(410).json({ error: 'Die Reservation ist abgelaufen. Bitte reserviere erneut.' });
+  }
+  if (!current || current.status === 'cancelled' || db.prepare('SELECT is_cancelled FROM tours WHERE id = ?').get(tourId)?.is_cancelled) {
+    return res.status(409).json({ error: 'Die Reservation oder Führung wurde storniert.' });
+  }
+  res.status(201).json({
+    id: result.id,
+    status: 'pending',
+    message: 'Bitte bestätige deine E-Mail-Adresse über die soeben gesendete E-Mail innerhalb von 30 Minuten. Bis dahin halten wir deine Plätze frei; erst danach ist die Reservation bestätigt.',
+  });
+});
+
+const confirmationRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Zu viele Bestätigungsversuche. Bitte später erneut versuchen.' },
+});
+
+// Deliberately POST only: following a mail link (including a scanner) cannot confirm.
+router.post('/bookings/confirm', confirmationRateLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  expirePendingBookings();
+  const { token } = req.body || {};
+  const invalid = { code: 400, error: 'Dieser Bestätigungslink ist ungültig.' };
+  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) {
+    return res.status(invalid.code).json({ error: invalid.error });
+  }
+  const hash = createHash('sha256').update(token).digest('hex');
+  const result = db.transaction(() => {
+    expirePendingBookings();
+    const booking = db.prepare('SELECT * FROM bookings WHERE verification_token_hash = ?').get(hash);
+    if (!booking) return invalid;
+    if (booking.status === 'expired') {
+      return { code: 410, error: 'Der Bestätigungslink ist abgelaufen. Bitte reserviere erneut.' };
+    }
+    const tour = db.prepare('SELECT * FROM tours WHERE id = ?').get(booking.tour_id);
+    if (booking.status === 'cancelled' || !tour || tour.is_cancelled) {
+      return { code: 409, error: 'Die Reservation oder Führung wurde storniert.' };
+    }
+    if (booking.status === 'confirmed') return { alreadyConfirmed: true };
+    if (booking.status !== 'pending') return invalid;
+    db.prepare("UPDATE bookings SET status = 'confirmed' WHERE id = ?").run(booking.id);
+    // Keep the hash for idempotent retries, even after the original expiry.
+    return { booking, tour };
+  }).immediate();
+  if (result.error) return res.status(result.code).json({ error: result.error });
+
+  if (!result.alreadyConfirmed) {
+    const { booking, tour } = result;
+    const bookingForMail = {
+      name: booking.name, email: booking.email, phone: booking.phone,
+      groupSize: booking.group_size, isSchoolClass: !!booking.is_school_class, note: booking.note,
+    };
+    const notifications = await Promise.allSettled([
+      sendVisitorConfirmation(bookingForMail, tour),
+      sendChurchNotification(bookingForMail, tour),
+    ]);
+    if (notifications.some((notification) => notification.status === 'rejected')) {
+      console.error('[bookings] Benachrichtigung nach Bestätigung fehlgeschlagen.');
+    }
+  }
+  res.json({ status: 'confirmed', message: 'Reservation bestätigt! Wir freuen uns auf euren Besuch.' });
 });
 
 export default router;

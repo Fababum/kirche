@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 // Einfacher, freundlicher Bestätigungs-Dialog als Ersatz für das
 // technisch wirkende Browser-`confirm()`-Fenster. Wird per <dialog>
-// nativ vom Browser gerendert (Fokus-Falle, ESC zum Schliessen gratis).
+// nativ vom Browser gerendert. Während einer Anfrage bleibt er geöffnet.
 function ConfirmDialog({
   open,
   title,
@@ -14,6 +14,32 @@ function ConfirmDialog({
   onCancel,
 }) {
   const ref = useRef(null);
+  const busy = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const titleId = useId();
+  const messageId = useId();
+
+  function cancel() {
+    if (busy.current) return;
+    setError('');
+    onCancel();
+  }
+
+  async function confirm() {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setError('');
+    try {
+      await onConfirm();
+    } catch (err) {
+      setError(`Die Aktion konnte nicht abgeschlossen werden. Bitte prüfen Sie die Verbindung und versuchen Sie es erneut. ${err.message || ''}`);
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
 
   useEffect(() => {
     const dialog = ref.current;
@@ -26,28 +52,32 @@ function ConfirmDialog({
     <dialog
       ref={ref}
       className="confirm-dialog"
+      aria-labelledby={titleId}
+      aria-describedby={messageId}
+      aria-busy={pending}
       onCancel={(e) => {
         e.preventDefault();
-        onCancel();
+        cancel();
       }}
       onClick={(e) => {
-        if (e.target === ref.current) onCancel();
+        if (e.target === ref.current) cancel();
       }}
     >
       <div className="confirm-dialog__body">
-        <h3>{title}</h3>
-        <p>{message}</p>
+        <h3 id={titleId}>{title}</h3>
+        <p id={messageId}>{message}</p>
+        {error && <p className="admin-error" role="alert">{error}</p>}
         <div className="confirm-dialog__actions">
-          <button type="button" className="btn btn--outline" onClick={onCancel}>
+          <button type="button" className="btn btn--outline" onClick={cancel} disabled={pending} autoFocus>
             {cancelLabel}
           </button>
           <button
             type="button"
             className={`btn ${danger ? 'btn--danger' : 'btn--primary'}`}
-            onClick={onConfirm}
-            autoFocus
+            onClick={confirm}
+            disabled={pending}
           >
-            {confirmLabel}
+            {pending ? 'Wird ausgeführt …' : confirmLabel}
           </button>
         </div>
       </div>

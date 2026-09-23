@@ -2,10 +2,10 @@
 // Express-Server für die Osterweg-Wyland Buchungsplattform.
 // Start:  node server/index.js   (oder npm run server)
 // ============================================================================
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
@@ -16,10 +16,17 @@ import { fileURLToPath } from 'url';
 import publicRoutes from './routes/public.js';
 import adminRoutes from './routes/admin.js';
 import { runStartupSetup } from './db/startup.js';
-
-dotenv.config();
+import { expirePendingBookings } from './bookings.js';
 
 runStartupSetup();
+expirePendingBookings();
+setInterval(() => {
+  try {
+    expirePendingBookings();
+  } catch {
+    console.error('[bookings] Abgelaufene Reservationen konnten nicht bereinigt werden.');
+  }
+}, 60 * 1000).unref();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();

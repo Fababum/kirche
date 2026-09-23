@@ -1,185 +1,99 @@
-.info-section__schedules {
+.home-page section.info-section {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  width: 100%;
+  min-height: 900px;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
 }
 
-.info-section__facts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
+.home-page .info-section__image {
+  min-width: 0;
+  background: url('/Osterweg Grab nah 1.jpg') center / cover no-repeat;
 }
 
-.info-section__map {
-  margin-top: var(--space-4);
-  padding: var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.home-page .info-section__content {
+  width: 100%;
+  max-width: 746px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: 64px 48px;
+  font-size: 20px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
-.info-section__map-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: var(--space-2) var(--space-2) 0;
-  font-size: 17px;
+.home-page .info-section__content h2 {
+  margin: 0 0 48px;
+  color: var(--text-h);
+  font-size: clamp(26px, 3.2vw, 32px);
+  text-align: center;
 }
 
-.info-section__map-link {
-  align-self: flex-end;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 0 var(--space-2);
+.home-page .info-section__block + .info-section__block {
+  margin-top: 32px;
 }
 
-.info-section__card-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
+.home-page .info-section__block h3 {
+  margin: 0 0 12px;
+  color: var(--coral);
+  font-size: 22px;
+  text-transform: uppercase;
 }
 
-.info-section__card-head h3 {
+.home-page .info-section__block p {
+  margin: 0 0 12px;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.home-page .info-section__block p:last-child {
+  margin-bottom: 0;
+}
+
+.home-page .info-section__schedule {
   margin: 0;
 }
 
-.info-section__icon {
-  display: flex;
-  align-items: center;
+.home-page .info-section__schedule-row {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, auto);
   justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
+  gap: 8px 24px;
+  padding-block: 4px;
 }
 
-.info-section__icon--coral {
-  background: var(--coral-soft);
-  color: var(--coral-hover);
-}
-
-.info-section__icon--gold {
-  background: var(--gold-soft);
-  color: var(--gold-hover);
-}
-
-.info-section__icon svg {
-  width: 19px;
-  height: 19px;
-}
-
-.info-section__rows {
-  margin-top: var(--space-3);
-}
-
-.info-section__row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 8px 0;
-  font-size: 17px;
-}
-
-.info-section__row-label {
-  font-weight: 700;
-  color: var(--text-h);
-  white-space: nowrap;
-}
-
-.info-section__row-leader {
-  flex: 1 1 auto;
-  min-width: 16px;
-  border-bottom: 1px dotted var(--border);
-  margin-bottom: 5px;
-}
-
-.info-section__row-value {
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.info-section__fact-text {
-  margin-top: var(--space-3);
-  margin-bottom: 0;
-  color: var(--text-muted);
-  font-size: 17px;
-}
-
-.info-section__fact-text a {
+.home-page .info-section__schedule dt {
   font-weight: 600;
 }
 
-@media (max-width: 900px) {
-  .info-section__schedules,
-  .info-section__facts {
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-  }
-
-  .info-section__schedules {
-    margin-bottom: var(--space-3);
-  }
+.home-page .info-section__schedule dd {
+  min-width: 0;
+  margin: 0;
 }
 
-@media (max-width: 640px) {
-  .info-section .card {
-    padding: 18px;
-    box-shadow: none;
+@media (max-width: 700px) {
+  .home-page section.info-section {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
   }
 
-  .info-section h2 {
-    font-size: 26px;
+  .home-page .info-section__image {
+    height: 200px;
   }
 
-  .info-section .section-heading {
-    margin-bottom: var(--space-5);
+  .home-page .info-section__content {
+    padding: 48px 24px;
   }
 
-  .info-section__icon {
-    width: 32px;
-    height: 32px;
+  .home-page .info-section__content h2 {
+    margin-bottom: 32px;
   }
 
-  .info-section__icon svg {
-    width: 17px;
-    height: 17px;
-  }
-
-  .info-section__card-head {
-    gap: 10px;
-    margin-bottom: 2px;
-  }
-
-  .info-section__rows,
-  .info-section__fact-text {
-    margin-top: var(--space-2);
-  }
-
-  .info-section__row,
-  .info-section__fact-text {
-    font-size: 16px;
-  }
-
-  .info-section__row {
-    padding: 7px 0;
-  }
-}
-
-@media (max-width: 340px) {
-  .info-section__row {
-    flex-wrap: wrap;
-  }
-
-  .info-section__row-leader {
-    display: none;
-  }
-
-  .info-section__row-value {
-    white-space: normal;
-    width: 100%;
+  .home-page .info-section__schedule-row {
+    gap: 8px 16px;
   }
 }

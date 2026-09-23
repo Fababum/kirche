@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { footerInfo, secretariat, eventInfo } from '../data/content';
-import Header from '../components/Header';
 import Footer from '../components/Footer';
 import './LegalPage.css';
 
@@ -10,12 +9,20 @@ function Impressum() {
   }, []);
 
   return (
-    <>
-      <Header minimal />
-      <main>
-        <section className="section legal-page">
+    <div className="home-page legal-shell">
+      <header className="legal-shell__header">
+        <a href="/" className="legal-shell__wordmark">{eventInfo.title}</a>
+        <a href="/" className="legal-shell__back">← Zurück zur Webseite</a>
+      </header>
+      <main className="legal-shell__main">
+        <section className="section legal-page" aria-labelledby="legal-title">
           <div className="container legal-page__content">
-            <h1>Impressum</h1>
+            <p className="legal-page__eyebrow">Rechtliches</p>
+            <h1 id="legal-title">Impressum</h1>
+            <nav className="legal-page__nav" aria-label="Rechtliche Seiten">
+              <a href="/impressum" aria-current="page">Impressum</a>
+              <a href="/datenschutz">Datenschutz</a>
+            </nav>
 
             <h2>Verantwortlich für diese Webseite</h2>
             <p>
@@ -68,7 +75,7 @@ function Impressum() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 

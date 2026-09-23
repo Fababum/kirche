@@ -38,7 +38,6 @@ export const registrationInfo = {
   heading: "Rundgang reservieren",
   subheading: "13. - 28. März 2027",
   notice: "Anmeldung nötig. Ab 5 Personen, max. 15 Personen pro Gruppe.",
-  schoolClasses: "Schulklassen: bitte bei Susanne Egloff anmelden.",
   accessibility: "Der Rundgang ist barrierefrei.",
   deadline: "Anmeldung bis 48 Stunden vorher möglich.",
   mobileHint: "Tag antippen, dann Führung auswählen.",

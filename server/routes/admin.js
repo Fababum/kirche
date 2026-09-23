@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { db } from '../db/database.js';
+import { expirePendingBookings } from '../bookings.js';
 import { requireAdmin, JWT_SECRET, COOKIE_NAME } from '../auth.js';
 import {
   isLockedOut,
@@ -93,11 +94,17 @@ router.get('/me', requireAdmin, (req, res) => {
 
 // ---- Ab hier: geschützte Verwaltungsrouten ----
 router.use(requireAdmin);
+router.use((req, res, next) => {
+  expirePendingBookings();
+  next();
+});
 
 // GET /api/admin/tours - alle Slots mit Buchungszahl
 router.get('/tours', (req, res) => {
   const tours = db
-    .prepare('SELECT * FROM tours ORDER BY date ASC, time ASC')
+    .prepare(`SELECT t.*, (SELECT COALESCE(SUM(group_size), 0) FROM bookings
+      WHERE tour_id = t.id AND status = 'pending') AS pending_count
+      FROM tours t ORDER BY date ASC, time ASC`)
     .all()
     .map((t) => ({
       id: t.id,
@@ -105,6 +112,7 @@ router.get('/tours', (req, res) => {
       time: t.time,
       capacity: t.capacity,
       bookedCount: t.booked_count,
+      pendingCount: t.pending_count,
       isCancelled: !!t.is_cancelled,
     }));
   res.json(tours);
@@ -116,7 +124,10 @@ router.post('/tours', (req, res) => {
   if (!date || !time) {
     return res.status(400).json({ error: 'Datum und Uhrzeit erforderlich.' });
   }
-  const cap = Number(capacity) || 15;
+  const cap = capacity === undefined ? 15 : Number(capacity);
+  if (!Number.isSafeInteger(cap) || cap < 0) {
+    return res.status(400).json({ error: 'Ungültige Kapazität.' });
+  }
   const result = db
     .prepare('INSERT INTO tours (date, time, capacity) VALUES (?, ?, ?)')
     .run(date, time, cap);
@@ -128,18 +139,22 @@ router.patch('/tours/:id', (req, res) => {
   const { id } = req.params;
   const { capacity, isCancelled } = req.body || {};
 
-  const tour = db.prepare('SELECT * FROM tours WHERE id = ?').get(id);
-  if (!tour) return res.status(404).json({ error: 'Führung nicht gefunden.' });
-
-  const newCapacity = capacity !== undefined ? Number(capacity) : tour.capacity;
-  const newCancelled =
-    isCancelled !== undefined ? (isCancelled ? 1 : 0) : tour.is_cancelled;
-
-  db.prepare('UPDATE tours SET capacity = ?, is_cancelled = ? WHERE id = ?').run(
-    newCapacity,
-    newCancelled,
-    id
-  );
+  const result = db.transaction(() => {
+    expirePendingBookings();
+    const tour = db.prepare('SELECT * FROM tours WHERE id = ?').get(id);
+    if (!tour) return { code: 404, error: 'Führung nicht gefunden.' };
+    const newCapacity = capacity !== undefined ? Number(capacity) : tour.capacity;
+    if (!Number.isSafeInteger(newCapacity) || newCapacity < 0) {
+      return { code: 400, error: 'Ungültige Kapazität.' };
+    }
+    if (newCapacity < tour.booked_count) {
+      return { code: 409, error: 'Die Kapazität darf nicht kleiner als die Anzahl bestätigter und vorläufig gehaltener Plätze sein.' };
+    }
+    const newCancelled = isCancelled !== undefined ? (isCancelled ? 1 : 0) : tour.is_cancelled;
+    db.prepare('UPDATE tours SET capacity = ?, is_cancelled = ? WHERE id = ?').run(newCapacity, newCancelled, id);
+    return {};
+  }).immediate();
+  if (result.error) return res.status(result.code).json({ error: result.error });
 
   res.json({ ok: true });
 });
@@ -147,17 +162,19 @@ router.patch('/tours/:id', (req, res) => {
 // DELETE /api/admin/tours/:id - Slot löschen (nur wenn keine Buchungen bestehen)
 router.delete('/tours/:id', (req, res) => {
   const { id } = req.params;
-  const bookingCount = db
-    .prepare("SELECT COUNT(*) as c FROM bookings WHERE tour_id = ? AND status = 'confirmed'")
-    .get(id).c;
-
-  if (bookingCount > 0) {
+  const deleted = db.transaction(() => {
+    expirePendingBookings();
+    const bookingCount = db.prepare("SELECT COUNT(*) as c FROM bookings WHERE tour_id = ? AND status IN ('pending', 'confirmed')").get(id).c;
+    if (bookingCount > 0) return false;
+    db.prepare('DELETE FROM tours WHERE id = ?').run(id);
+    return true;
+  }).immediate();
+  if (!deleted) {
     return res.status(409).json({
       error: 'Slot kann nicht gelöscht werden, da bereits Reservationen bestehen. Stattdessen stornieren.',
     });
   }
 
-  db.prepare('DELETE FROM tours WHERE id = ?').run(id);
   res.json({ ok: true });
 });
 
@@ -165,7 +182,9 @@ router.delete('/tours/:id', (req, res) => {
 router.get('/bookings', (req, res) => {
   const bookings = db
     .prepare(
-      `SELECT b.*, t.date as tour_date, t.time as tour_time
+      `SELECT b.id, b.tour_id, b.name, b.email, b.phone, b.group_size,
+        b.is_school_class, b.note, b.status, b.created_at, b.verification_expires_at,
+        t.date as tour_date, t.time as tour_time
        FROM bookings b
        JOIN tours t ON t.id = b.tour_id
        ORDER BY t.date ASC, t.time ASC, b.created_at ASC`
@@ -179,19 +198,21 @@ router.patch('/bookings/:id', (req, res) => {
   const { id } = req.params;
   const { status } = req.body || {};
 
-  const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(id);
-  if (!booking) return res.status(404).json({ error: 'Reservation nicht gefunden.' });
-
-  if (status === 'cancelled' && booking.status !== 'cancelled') {
-    const transaction = db.transaction(() => {
-      db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run('cancelled', id);
-      db.prepare('UPDATE tours SET booked_count = MAX(0, booked_count - ?) WHERE id = ?').run(
-        booking.group_size,
-        booking.tour_id
-      );
-    });
-    transaction();
+  if (status !== 'cancelled') {
+    return res.status(400).json({ error: 'Nur eine Stornierung ist erlaubt.' });
   }
+  const found = db.transaction(() => {
+    expirePendingBookings();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(id);
+    if (!booking) return false;
+    if (booking.status === 'pending' || booking.status === 'confirmed') {
+      db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(id);
+      db.prepare('UPDATE tours SET booked_count = booked_count - ? WHERE id = ?')
+        .run(booking.group_size, booking.tour_id);
+    }
+    return true;
+  }).immediate();
+  if (!found) return res.status(404).json({ error: 'Reservation nicht gefunden.' });
 
   res.json({ ok: true });
 });

@@ -38,12 +38,38 @@
 .site-footer__legal {
   display: flex;
   gap: var(--space-4);
-  margin-top: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid rgba(38, 34, 32, 0.12);
   width: 100%;
   max-width: 300px;
-  justify-content: center;
+  justify-content: flex-start;
+}
+
+.site-footer__bottom {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(38 34 32 / 12%);
+  text-align: left;
+}
+
+.site-footer__church {
+  display: block;
+  flex: 0 0 auto;
+  width: 220px;
+  max-width: 100%;
+}
+
+.site-footer__church img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.site-footer__bottom .site-footer__copy {
+  margin-top: 12px;
 }
 
 .site-footer__legal a {
@@ -70,5 +96,13 @@
   }
   .site-footer__inner {
     gap: 10px;
+  }
+  .site-footer__bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .site-footer__church {
+    align-self: flex-end;
+    width: 190px;
   }
 }

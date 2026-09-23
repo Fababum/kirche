@@ -11,6 +11,22 @@
   background: var(--bg-alt);
 }
 
+.admin-login,
+.admin-dashboard {
+  --font-heading: Arial, Helvetica, sans-serif;
+  --accent: #a9425f;
+  --accent-hover: #88334c;
+  --text-muted: #625950;
+}
+
+.admin-login h1,
+.admin-dashboard h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.2;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .admin-login {
   min-height: 100svh;
   display: flex;
@@ -72,6 +88,7 @@
 /* ---------- Dashboard-Rahmen ---------- */
 
 .admin-dashboard {
+  width: 100%;
   max-width: 1080px;
   margin: 0 auto;
   padding: 32px 24px 64px;
@@ -96,6 +113,7 @@
 
 .admin-dashboard__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -185,6 +203,17 @@
   color: var(--accent);
 }
 
+.admin-stats__pending {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #e6c47a;
+  border-radius: var(--radius-sm);
+  background: #fff4d6;
+  color: #755000;
+  font-size: 14px;
+}
+
 /* ---------- Formulare / neue Slots ---------- */
 
 .admin-tours__new {
@@ -242,6 +271,9 @@
 
 .admin-filterbar__chips {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   gap: 6px;
   background: var(--bg-alt);
   padding: 4px;
@@ -348,6 +380,16 @@
 .admin-status-pill--cancelled {
   background: #f4e6e5;
   color: #a4322a;
+}
+
+.admin-status-pill--pending {
+  background: #fff0c2;
+  color: #755000;
+}
+
+.admin-status-pill--expired {
+  background: #eaeaea;
+  color: #555;
 }
 
 .admin-bookings__toolbar {
@@ -523,6 +565,7 @@
   .admin-filterbar {
     flex-direction: column;
     align-items: stretch;
+    min-width: 0;
   }
 
   .admin-filterbar__chips {
@@ -631,6 +674,98 @@
   margin-bottom: var(--space-4);
 }
 
+.admin-schedule__help,
+.admin-schedule .admin-filterbar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.admin-schedule__help summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-h);
+  min-height: 28px;
+}
+
+.admin-schedule__help ul {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+
+.admin-schedule__help li + li {
+  margin-top: 10px;
+}
+
+.admin-stat-card__detail,
+.admin-schedule__results {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.admin-schedule__search-label {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 280px;
+  min-width: 0;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-schedule__search-label .admin-filterbar__search {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-schedule__capacity-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.admin-schedule__capacity-form > span {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.admin-schedule__capacity-form input {
+  width: 90px;
+  min-height: 44px;
+}
+
+.admin-schedule__draft-notice {
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+}
+
+.admin-schedule button:disabled,
+.confirm-dialog button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.admin-schedule :focus-visible,
+.confirm-dialog :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.confirm-dialog__body .admin-error {
+  color: #b3261e;
+}
+
 .admin-schedule__new-btn {
   width: 100%;
   border-style: dashed;
@@ -658,6 +793,7 @@
 .admin-schedule__header {
   width: 100%;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
@@ -691,7 +827,7 @@
   font-weight: 600;
   color: var(--text-h);
   margin-left: auto;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .admin-schedule__details {
@@ -711,6 +847,7 @@
   font-size: 14px;
   font-weight: 600;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
@@ -752,6 +889,7 @@
 }
 
 .admin-schedule__booking-contact {
+  overflow-wrap: anywhere;
   font-size: 14px;
   color: var(--text-muted);
   margin-bottom: 6px;
@@ -766,11 +904,31 @@
 
 .admin-schedule__booking-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
 
+.admin-schedule__booking-expiry {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 @media (max-width: 700px) {
+  .admin-schedule__search-label {
+    flex-basis: auto;
+  }
+
+  .admin-schedule__details {
+    padding: 0 var(--space-3) var(--space-3);
+  }
+
+  .admin-schedule__tour-actions > .btn,
+  .admin-schedule__capacity-form {
+    width: 100%;
+  }
+
   .admin-schedule__header {
     flex-wrap: wrap;
     gap: 8px;

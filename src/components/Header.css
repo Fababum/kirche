@@ -20,12 +20,10 @@
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-.site-header__logo-img {
-  display: block;
-  height: 58px;
-  width: auto;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-h);
 }
 
 .site-header__nav--desktop {
@@ -150,9 +148,6 @@
 @media (max-width: 800px) {
   .site-header__inner {
     height: 78px;
-  }
-  .site-header__logo-img {
-    height: 46px;
   }
   .site-header__nav--desktop {
     display: none;

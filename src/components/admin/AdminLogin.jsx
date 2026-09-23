@@ -24,8 +24,8 @@ function AdminLogin({ onLogin }) {
   return (
     <div className="admin-login">
       <form className="admin-login__form card" onSubmit={handleSubmit}>
-        <h2>Willkommen zurück</h2>
-        <p>Melde dich an, um die Anmeldungen für den Osterweg zu verwalten.</p>
+        <h1>Verwaltung</h1>
+        <p>Osterweg Wyland: Zugang für das Sekretariat und die Organisation.</p>
 
         <label>
           Benutzername

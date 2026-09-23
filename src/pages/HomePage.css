@@ -1,0 +1,471 @@
+@font-face {
+  font-family: 'Roboto Condensed';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/roboto-condensed-latin.woff2') format('woff2');
+}
+
+/* Flyer-inspired typography; legal and admin pages stay unchanged. */
+.home-page {
+  --bg: #fdedcf;
+  --bg-alt: #f4c880;
+  --surface: #fff8eb;
+  --accent: #a9425f;
+  --accent-hover: #88334c;
+  --accent-soft: #f8dce0;
+  --coral: #eb6264;
+  --text: #29211f;
+  --text-h: #a9425f;
+  --text-muted: #57473e;
+  --border: #d7b78e;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --font: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
+  --font-heading: Arial, Helvetica, sans-serif;
+  --content-width: 1028px;
+  background: var(--bg);
+  font-family: var(--font);
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.home-page section[id] {
+  scroll-margin-top: 24px;
+}
+
+.home-page__main {
+  isolation: isolate;
+}
+
+.home-page__content {
+  position: relative;
+  z-index: 1;
+  background: var(--bg);
+  box-shadow: 0 -12px 40px rgb(76 37 48 / 6%);
+}
+
+.home-page__skip {
+  position: absolute;
+  left: 24px;
+  top: 8px;
+  transform: translateY(-200%);
+  z-index: 10;
+  background: var(--bg);
+  padding: 8px;
+}
+
+.home-page__skip:focus {
+  transform: none;
+}
+
+.home-page .section {
+  padding-block: clamp(64px, 7vw, 100px);
+  background: var(--bg);
+}
+
+.home-page h2,
+.home-page .section-heading h1 {
+  font-size: clamp(26px, 3.2vw, 32px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.home-page h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--coral);
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.home-page .section-heading {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.home-page .section-heading h2 {
+  padding: 0;
+}
+
+.home-page .section-heading h2::after {
+  content: none;
+}
+
+.home-page .section-heading p {
+  max-width: 640px;
+  margin: 20px auto 0;
+  color: var(--text);
+  font-size: 20px;
+}
+
+.home-page .card,
+.home-page .card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.home-page .btn {
+  font-family: var(--font-heading);
+  border-radius: 0;
+  background: var(--coral);
+  color: #29211f;
+  box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 17px;
+  font-weight: 600;
+  padding: 16px 32px;
+}
+
+.home-page .btn:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: none;
+}
+
+.home-page .hero {
+  padding: 0;
+  background: #f4c880;
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  height: 100dvh;
+  isolation: isolate;
+}
+
+.home-page .hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(253 237 207 / 12%), rgb(253 237 207 / 32%) 55%, rgb(253 237 207 / 65%));
+  pointer-events: none;
+}
+
+.home-page .hero__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.home-page .hero__title {
+  position: absolute;
+  z-index: 1;
+  top: 43%;
+  left: 5%;
+  right: 5%;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.home-page .hero h1 {
+  max-width: none;
+  margin: 0;
+  font: 700 clamp(52px, 8.5vw, 120px)/1.08 var(--font-heading);
+  letter-spacing: -0.025em;
+  text-transform: none;
+  color: #4c2530;
+}
+
+.home-page .hero h1 span {
+  display: block;
+  margin-top: 4px;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.home-page .hero__title p {
+  color: #4c2530;
+  font-size: clamp(16px, 1.7vw, 22px);
+  font-weight: 400;
+  margin: 28px 0 0;
+}
+
+.home-page .hero__discover {
+  position: absolute;
+  z-index: 1;
+  bottom: max(32px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  color: #4c2530;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hero__discover span {
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.event-location {
+  text-align: center;
+  padding: 72px 0 64px;
+  background: #fff0d6;
+}
+
+.event-location::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 1px;
+  margin: 36px auto 0;
+  background: rgb(169 66 95 / 22%);
+}
+
+.home-page .hero__date {
+  color: var(--accent);
+  font: 700 clamp(24px, 3vw, 34px)/1.4 var(--font-heading);
+  letter-spacing: 0;
+  text-transform: none;
+  margin-bottom: 24px;
+}
+
+.event-location p:last-child {
+  font-size: clamp(20px, 2.2vw, 25px);
+  font-weight: 400;
+}
+
+.event-intro {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  min-height: 617px;
+  border-top: 1px solid rgb(169 66 95 / 7%);
+}
+
+.event-intro__copy {
+  align-self: center;
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 72px 48px;
+  text-align: center;
+}
+
+.event-intro__copy h2 {
+  margin-bottom: 40px;
+}
+
+.event-intro__copy p {
+  margin-bottom: 28px;
+}
+
+.event-intro__art {
+  background: url('/images/hero-illustration.jpg') center / cover;
+}
+
+.home-page .reservation-intro,
+.home-page .flyer-banner {
+  background: var(--bg-alt);
+  text-align: center;
+  padding-block: clamp(64px, 7vw, 100px);
+}
+
+.reservation-intro .container {
+  max-width: 780px;
+}
+
+.reservation-intro p {
+  margin-bottom: 28px;
+}
+
+.reservation-intro__deadline {
+  padding-top: 24px;
+  font-size: 17px;
+}
+
+.home-page .volunteer {
+  background: linear-gradient(rgb(253 237 207 / 78%), rgb(253 237 207 / 78%)),
+    url('/Hintergrund.jpg') right center / cover;
+}
+
+.home-page .volunteer__grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.home-page .volunteer__card:nth-child(n) {
+  background: var(--bg);
+  border: 0;
+  padding: 36px 24px;
+  border-radius: 0;
+  gap: 16px;
+  text-align: center;
+  min-width: 0;
+}
+
+.home-page .volunteer__card:nth-child(n) .badge {
+  align-self: center;
+  background: none;
+  border: 0;
+  color: var(--text);
+  padding: 0;
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.home-page .volunteer__card p {
+  font-size: 18px;
+}
+
+.home-page .volunteer__contact {
+  margin-top: auto;
+  padding-top: 24px;
+  border: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.home-page .volunteer__contact strong {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.home-page .volunteer__contact a {
+  font-weight: 400;
+  text-decoration: underline;
+}
+
+.home-page .flyer-banner__content {
+  max-width: 800px;
+}
+
+.home-page .flyer-banner__text {
+  font-size: 20px;
+  color: var(--text);
+  margin: 28px auto 36px;
+}
+
+.home-page .site-footer {
+  background: var(--bg-alt);
+  border: 0;
+  color: var(--text);
+}
+
+.home-page .site-footer p,
+.home-page .site-footer a {
+  color: var(--text);
+}
+
+.reservation-page__back {
+  padding-top: 32px;
+  font-size: 17px;
+}
+
+.reservation-page .site-header {
+  position: static;
+}
+
+.home-page .booking {
+  min-height: 60svh;
+}
+
+.home-page .booking__form {
+  max-width: 720px;
+}
+
+.home-page .booking__form-row label {
+  min-width: 0;
+}
+
+.confirmation-page {
+  min-height: 65svh;
+}
+
+.confirmation-page__content {
+  max-width: 780px;
+  overflow-wrap: anywhere;
+}
+
+.confirmation-page h1 {
+  font: 700 clamp(28px, 4vw, 42px)/1.2 var(--font-heading);
+  margin-block: 24px;
+}
+
+.confirmation-page p {
+  margin-bottom: 24px;
+}
+
+.confirmation-page__contact {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-top: 32px;
+}
+
+.booking__pending {
+  max-width: 720px;
+  margin: 0 auto 40px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.home-page .booking__pending h2 {
+  font-size: 24px;
+  text-transform: none;
+}
+
+@media (max-width: 900px) {
+  .home-page .volunteer__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .home-page {
+    font-size: 18px;
+  }
+
+  .home-page p {
+    font-size: inherit;
+  }
+
+  .home-page .hero__art {
+    object-position: 56% center;
+  }
+
+  .event-location {
+    padding: 64px 0;
+  }
+
+  .event-intro {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .event-intro__copy {
+    padding: 48px 24px;
+  }
+
+  .event-intro__art {
+    min-height: 220px;
+  }
+
+  .home-page .volunteer__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-page .section-heading {
+    margin-bottom: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .hero {
+    position: relative;
+  }
+}

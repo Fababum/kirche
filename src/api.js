@@ -15,7 +15,9 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const message = body?.error || `Fehler (${res.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = res.status;
+    throw error;
   }
 
   return body;
@@ -25,6 +27,8 @@ export const api = {
   getTours: (from, to) => request(`/tours?from=${from}&to=${to}`),
   createBooking: (data) =>
     request('/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  confirmBooking: (token) =>
+    request('/bookings/confirm', { method: 'POST', body: JSON.stringify({ token }) }),
 
   // Admin
   login: (username, password) =>

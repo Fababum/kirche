@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { footerInfo, secretariat } from '../data/content';
-import Header from '../components/Header';
+import { footerInfo, secretariat, eventInfo } from '../data/content';
 import Footer from '../components/Footer';
 import './LegalPage.css';
 
@@ -10,12 +9,20 @@ function Datenschutz() {
   }, []);
 
   return (
-    <>
-      <Header minimal />
-      <main>
-        <section className="section legal-page">
+    <div className="home-page legal-shell">
+      <header className="legal-shell__header">
+        <a href="/" className="legal-shell__wordmark">{eventInfo.title}</a>
+        <a href="/" className="legal-shell__back">← Zurück zur Webseite</a>
+      </header>
+      <main className="legal-shell__main">
+        <section className="section legal-page" aria-labelledby="legal-title">
           <div className="container legal-page__content">
-            <h1>Datenschutzerklärung</h1>
+            <p className="legal-page__eyebrow">Rechtliches</p>
+            <h1 id="legal-title">Datenschutzerklärung</h1>
+            <nav className="legal-page__nav" aria-label="Rechtliche Seiten">
+              <a href="/impressum">Impressum</a>
+              <a href="/datenschutz" aria-current="page">Datenschutz</a>
+            </nav>
             <p className="legal-page__intro">
               Wir nehmen den Schutz deiner persönlichen Daten ernst. Diese Seite erklärt in
               einfachen Worten, welche Daten wir sammeln, wozu wir sie brauchen und wie lange
@@ -43,6 +50,7 @@ function Datenschutz() {
               <li>E-Mail-Adresse</li>
               <li>Telefonnummer (falls angegeben)</li>
               <li>Anzahl Personen und ob es sich um eine Schulklasse handelt</li>
+              <li>Bestätigungsstatus der E-Mail-Adresse sowie ein gehashter, zeitlich begrenzter Bestätigungscode</li>
               <li>Allfällige Bemerkung, die du im Formular hinterlässt</li>
             </ul>
             <p>
@@ -54,6 +62,11 @@ function Datenschutz() {
             </p>
 
             <h2>Wie lange wir die Daten aufbewahren</h2>
+            <p>
+              Neue Reservationen müssen innerhalb von 30 Minuten über einen E-Mail-Link bestätigt werden.
+              Ohne Bestätigung geben wir die vorläufig belegten Plätze wieder frei. Die abgelaufene
+              Anmeldung bleibt für organisatorische Rückfragen bis zur nachfolgend beschriebenen Löschung gespeichert.
+            </p>
             <p>
               Reservationsdaten werden nach Ende des Osterwegs Wyland 2027 gelöscht, sofern sie
               nicht aus organisatorischen Gründen (z.B. laufende Rückfragen) noch benötigt
@@ -145,7 +158,7 @@ function Datenschutz() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 
