@@ -125,7 +125,7 @@ function AppRoutes() {
           }
         />
       </Routes>
-      {!isAdmin && <CookieConsent />}
+      {!isAdmin && location.pathname !== '/reservation/bestaetigen' && <CookieConsent />}
     </>
   );
 }

@@ -386,6 +386,49 @@
   min-height: 65svh;
 }
 
+.confirmation-complete {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 6vw, 72px) 20px;
+}
+
+.confirmation-complete__card {
+  width: 100%;
+  max-width: 660px;
+  padding: clamp(24px, 5vw, 52px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.confirmation-complete__icon {
+  width: 56px;
+  height: 56px;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+
+.confirmation-complete h1 {
+  font: 700 clamp(28px, 4vw, 40px)/1.2 var(--font-heading);
+  margin-block: 20px;
+}
+
+.confirmation-complete p {
+  margin-bottom: 20px;
+}
+
+.confirmation-complete .btn {
+  margin-top: 12px;
+}
+
+.confirmation-complete .confirmation-page__contact {
+  font-size: 16px;
+  margin-bottom: 0;
+}
+
 .confirmation-page__content {
   max-width: 780px;
   overflow-wrap: anywhere;
@@ -501,7 +544,9 @@
   }
 
   .event-intro__art {
-    min-height: 220px;
+    min-height: 0;
+    height: clamp(180px, 60vw, 300px);
+    background-position: center;
   }
 
   .home-page .volunteer__grid {

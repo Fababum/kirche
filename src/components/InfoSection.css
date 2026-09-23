@@ -82,7 +82,7 @@
   }
 
   .home-page .info-section__image {
-    height: 200px;
+    display: none;
   }
 
   .home-page .info-section__content {
