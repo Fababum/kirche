@@ -25,9 +25,6 @@ function AdminDashboard({ username, onLogout }) {
         <div>
           <h1>Reservationen verwalten</h1>
           <p>Osterweg Wyland · Angemeldet als {username}</p>
-          <p>
-            Eine Führung auswählen, um die angemeldeten Personen und ihre Kontaktdaten zu sehen.
-          </p>
         </div>
         <div className="admin-dashboard__actions">
           <a href="/" className="btn btn--outline">

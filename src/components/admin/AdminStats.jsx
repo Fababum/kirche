@@ -39,20 +39,18 @@ function AdminStats({ bookings, tours }) {
 
   return (
     <div className="admin-stats">
-      <StatCard label="Kommende Reservationen" value={stats.upcoming} detail="Nur bestätigt, ab heute; eine Reservation kann mehrere Personen umfassen." />
-      <StatCard label="Personen (kommend)" value={stats.totalGuests} detail="Summe der bestätigten Plätze ab heute." />
-      <StatCard label="Nächste 7 Tage" value={stats.nextWeek} detail={`Bestätigte Reservationen: ${stats.range} (inklusive).`} />
+      <StatCard label="Reservationen" value={stats.upcoming} detail="Bestätigt, ab heute" />
+      <StatCard label="Personen" value={stats.totalGuests} detail="Bestätigt, ab heute" />
+      <StatCard label="Nächste 7 Tage" value={stats.nextWeek} detail={stats.range} />
       <StatCard
         label="Neue Reservationen"
-        detail="Bestätigte Reservationen, eingegangen in den letzten 24 Stunden. Stornierte Führungen zählen in keiner Kennzahl mit."
+        detail="Bestätigt, Eingang letzte 24 Stunden"
         value={stats.newCount}
         tone={stats.newCount > 0 ? 'highlight' : undefined}
       />
-      <p className="admin-stats__pending">
-        <strong>{stats.pendingCount} Reservationen: E-Mail-Bestätigung ausstehend.</strong>{' '}
-        Nicht in den bestätigten Kennzahlen enthalten; stornierte Führungen sind ausgeschlossen.
-        Diese Reservationen halten Plätze für 30 Minuten frei. Ohne Bestätigung verfallen sie automatisch.
-      </p>
+      {stats.pendingCount > 0 && <p className="admin-stats__pending">
+        <strong>{stats.pendingCount} E-Mail-Bestätigungen ausstehend.</strong> Plätze für maximal 30 Minuten gehalten.
+      </p>}
     </div>
   );
 }

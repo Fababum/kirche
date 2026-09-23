@@ -11,7 +11,7 @@ export const BOOKING_STATUS_LABELS = {
 // verwenden können.
 // Die Bibliothek wird erst bei Bedarf (Klick auf "Excel herunterladen")
 // nachgeladen, damit sie das normale Webseiten-Bundle nicht aufbläht.
-export async function downloadBookingsExcel(bookings) {
+export async function downloadBookingsExcel(bookings, tour = null) {
   const XLSX = await import('xlsx');
   const headers = [
     'Datum',
@@ -53,8 +53,23 @@ export async function downloadBookingsExcel(bookings) {
   ];
 
   const workbook = XLSX.utils.book_new();
+  if (tour) {
+    const overview = XLSX.utils.aoa_to_sheet([
+      ['Führung', 'Osterweg Wyland'],
+      ['Datum', tour.date],
+      ['Uhrzeit', tour.time],
+      ['Plätze insgesamt', tour.capacity],
+      ['Belegt (inkl. vorläufig gehalten)', tour.bookedCount],
+      ['Status', tour.isCancelled ? 'Storniert' : tour.bookedCount >= tour.capacity ? 'Voll' : 'Aktiv'],
+      ['Reservationen', bookings.length],
+    ]);
+    overview['!cols'] = [{ wch: 34 }, { wch: 24 }];
+    XLSX.utils.book_append_sheet(workbook, overview, 'Führung');
+  }
   XLSX.utils.book_append_sheet(workbook, sheet, 'Reservationen');
 
-  const filename = `reservationen-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const filename = tour
+    ? `fuehrung-${tour.date}-${tour.time.replace(':', '-')}-${tour.id}.xlsx`
+    : `reservationen-${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(workbook, filename);
 }

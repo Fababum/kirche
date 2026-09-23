@@ -73,13 +73,15 @@ function AdminSchedule() {
   const [search, setSearch] = useState('');
   const [timeFilter, setTimeFilter] = useState('upcoming'); // upcoming | all | past
   const [expanded, setExpanded] = useState(() => new Set());
+  const [expandedDays, setExpandedDays] = useState(() => new Set());
   const [pendingCancelBooking, setPendingCancelBooking] = useState(null);
   const [pendingDeleteTour, setPendingDeleteTour] = useState(null);
   const [pendingToggleTour, setPendingToggleTour] = useState(null);
   const [capacityDraft, setCapacityDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState(null);
+  const exportBusy = useRef(false);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newTour, setNewTour] = useState({ date: '', time: '', capacity: 15 });
   const [actionError, setActionError] = useState('');
@@ -126,8 +128,20 @@ function AdminSchedule() {
     .filter((entry) => matchesSearch(entry, search))
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-  const newCount = schedule.filter((tour) => !tour.isCancelled)
-    .flatMap((tour) => tour.bookings).filter(isNewBooking).length;
+  const days = new Map();
+  for (const tour of filtered) {
+    if (!days.has(tour.date)) days.set(tour.date, []);
+    days.get(tour.date).push(tour);
+  }
+
+  function toggleDay(date) {
+    setExpandedDays((previous) => {
+      const next = new Set(previous);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }
 
   function toggleExpand(tourId) {
     setExpanded((prev) => {
@@ -220,16 +234,19 @@ function AdminSchedule() {
     }
   }
 
-  async function handleExport() {
-    setExporting(true);
+  async function handleExport(tour = null) {
+    if (exportBusy.current) return;
+    exportBusy.current = true;
+    setExporting(tour ? tour.id : 'all');
     setActionError('');
     try {
-      const allBookingsInView = filtered.flatMap((entry) => entry.bookings);
-      await downloadBookingsExcel(allBookingsInView);
+      const exportBookings = tour ? tour.bookings : filtered.flatMap((entry) => entry.bookings);
+      await downloadBookingsExcel(exportBookings, tour);
     } catch (err) {
       setActionError(`Die Excel-Datei konnte nicht erstellt werden. Bitte versuchen Sie es erneut. ${err.message || ''}`);
     } finally {
-      setExporting(false);
+      exportBusy.current = false;
+      setExporting(null);
     }
   }
 
@@ -249,45 +266,46 @@ function AdminSchedule() {
       <details className="admin-schedule__help">
         <summary>Kurzhilfe für das Sekretariat</summary>
         <ul>
-          <li><strong>Reservation finden:</strong> Nach Name, Datum, E-Mail oder Telefon suchen. Für stornierte oder ältere Führungen den Filter «Alle» wählen.</li>
+          <li><strong>Reservation finden:</strong> Datum aufklappen, dann die Uhrzeit öffnen. Oder nach Name, Datum, E-Mail oder Telefon suchen. Für stornierte oder ältere Führungen den Filter «Alle» wählen.</li>
           <li><strong>Zahlen verstehen:</strong> Eine Reservation kann mehrere Personen umfassen. Die Kennzahlen und «Neu» zählen nur bestätigte Reservationen auf nicht stornierten Führungen. «Neu» bedeutet: in den letzten 24 Stunden eingegangen. Die belegten Plätze einer Führung enthalten auch vorläufig gehaltene Plätze.</li>
           <li><strong>E-Mail-Bestätigung:</strong> Ausstehende Reservationen halten Plätze für 30 Minuten frei. Die buchende Person muss den Link in ihrer E-Mail öffnen. Ohne Bestätigung verfällt die Reservation automatisch und die Plätze werden freigegeben. Das Sekretariat bestätigt Reservationen nicht manuell.</li>
           <li><strong>Plätze ändern:</strong> Führung öffnen, «Platzanzahl ändern» wählen und ausdrücklich speichern. Abbrechen verwirft die Eingabe.</li>
           <li><strong>Absagen mitteilen:</strong> Beim Stornieren werden keine automatischen E-Mails versendet. Betroffene bitte selbst per E-Mail oder Telefon informieren. Bei einer stornierten Führung bleiben die Reservationen bestehen.</li>
-          <li><strong>Excel:</strong> Enthält alle Reservationen der angezeigten Führungen mit ihrem Status, auch ausstehende, abgelaufene, stornierte und nicht einzeln zur Suche passende Reservationen.</li>
+          <li><strong>Excel:</strong> Oben alle angezeigten Führungen exportieren oder eine Führung öffnen und einzeln herunterladen. Enthalten sind alle zugehörigen Reservationen mit ihrem Status, auch ausstehende, abgelaufene und stornierte.</li>
+          <li><strong>Voll:</strong> Keine Plätze frei. Auch die für eine E-Mail-Bestätigung vorläufig gehaltenen Plätze zählen mit.</li>
         </ul>
       </details>
       <AdminStats bookings={bookings} tours={tours} />
 
       <div className="admin-bookings__toolbar">
         <div className="admin-bookings__status">
-          {newCount > 0 && (
-            <span className="admin-badge admin-badge--new">{newCount} neue Reservationen (24h)</span>
-          )}
           {lastUpdated && (
             <span className="admin-bookings__updated">
-              Zuletzt aktualisiert um {formatTimestamp(lastUpdated)} · automatisch alle 30 Sekunden
+              Stand {formatTimestamp(lastUpdated)} · aktualisiert automatisch
             </span>
           )}
         </div>
         <div className="admin-bookings__actions">
+          <button type="button" className="btn btn--primary" onClick={() => setShowNewForm(true)} disabled={showNewForm}>
+            + Neue Führung
+          </button>
           <button type="button" className="btn btn--outline" onClick={reload} disabled={loading}>
             {loading ? 'Wird aktualisiert …' : 'Aktualisieren'}
           </button>
           <button
             type="button"
-            className="btn btn--primary"
-            onClick={handleExport}
-            disabled={filtered.length === 0 || exporting}
+            className="btn btn--outline"
+            onClick={() => handleExport()}
+            disabled={filtered.length === 0 || exporting !== null}
           >
-            {exporting ? 'Wird erstellt …' : 'Als Excel herunterladen'}
+            {exporting === 'all' ? 'Wird erstellt …' : 'Excel exportieren'}
           </button>
         </div>
       </div>
 
       <div className="admin-filterbar">
         <label className="admin-schedule__search-label">
-          Reservation finden: Name, Datum oder Kontakt
+          Reservation suchen
         <input
           type="search"
           className="admin-filterbar__search"
@@ -296,7 +314,11 @@ function AdminSchedule() {
           onChange={(e) => {
             const query = e.target.value;
             setSearch(query);
-            if (query.trim()) setExpanded(new Set(schedule.filter((entry) => matchesSearch(entry, query)).map((entry) => entry.id)));
+            if (query.trim()) {
+              const matches = schedule.filter((entry) => matchesSearch(entry, query));
+              setExpanded(new Set(matches.map((entry) => entry.id)));
+              setExpandedDays(new Set(matches.map((entry) => entry.date)));
+            }
           }}
         />
         </label>
@@ -327,9 +349,19 @@ function AdminSchedule() {
           </button>
         </div>
       </div>
-      <p className="admin-schedule__results" role="status">
-        {filtered.length} {filtered.length === 1 ? 'Führung' : 'Führungen'} im gewählten Zeitraum{search.trim() ? ' passend zur Suche' : ''}. Die Suche zeigt jeweils die ganze Führung mit allen Reservationen.
-      </p>
+      <div className="admin-schedule__list-heading">
+        <p className="admin-schedule__results" role="status">
+          {days.size} {days.size === 1 ? 'Tag' : 'Tage'} · {filtered.length} {filtered.length === 1 ? 'Führung' : 'Führungen'}{search.trim() ? ' passend zur Suche (mit allen Reservationen)' : ' · Datum öffnen, Uhrzeit wählen.'}
+        </p>
+        {filtered.some((tour) => expandedDays.has(tour.date)) && (
+          <button type="button" className="admin-schedule__collapse" onClick={() => {
+            setExpandedDays(new Set());
+            setExpanded(new Set());
+          }}>
+            Alle zuklappen
+          </button>
+        )}
+      </div>
 
       {actionError && <p className="admin-error" role="alert">{actionError}</p>}
       {capacityDraft && (
@@ -341,8 +373,8 @@ function AdminSchedule() {
         </p>
       )}
 
-      <div className="admin-schedule__new">
-        {showNewForm ? (
+      {showNewForm && (
+        <div className="admin-schedule__new">
           <form className="card admin-schedule__new-form" onSubmit={handleCreateTour}>
             <div className="admin-tours__new-row">
               <label>
@@ -390,22 +422,30 @@ function AdminSchedule() {
               </button>
             </div>
           </form>
-        ) : (
-          <button
-            type="button"
-            className="btn btn--outline admin-schedule__new-btn"
-            onClick={() => setShowNewForm(true)}
-          >
-            + Neue Führung anlegen
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <p className="admin-empty">Keine Führungen gefunden.</p>
       ) : (
         <div className="admin-schedule__list">
-          {filtered.map((tour) => {
+          {[...days].map(([date, dayTours]) => (
+            <section className="admin-schedule__day" key={date} aria-labelledby={`day-title-${date}`}>
+              <h2 className="admin-schedule__day-heading" id={`day-title-${date}`}>
+                <button type="button" className="admin-schedule__day-toggle"
+                  aria-expanded={expandedDays.has(date)} aria-controls={`day-tours-${date}`}
+                  onClick={() => toggleDay(date)}>
+                  <span className="admin-schedule__chevron" aria-hidden="true">{expandedDays.has(date) ? '▾' : '▸'}</span>
+                  <svg className="admin-schedule__folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+                    <path d={expandedDays.has(date) ? 'M3 10h18l-3 11H6L3 10Z' : 'M3 9h18'} />
+                  </svg>
+                  <span className="admin-schedule__day-date">{formatDateLabel(date)}</span>
+                  <span className="admin-schedule__day-count">{dayTours.length} {dayTours.length === 1 ? 'Führung' : 'Führungen'}</span>
+                </button>
+              </h2>
+              <div id={`day-tours-${date}`} className="admin-schedule__day-tours" hidden={!expandedDays.has(date)}>
+          {dayTours.map((tour) => {
             const isOpen = expanded.has(tour.id);
             const activeBookings = tour.bookings.filter(isActiveBooking);
             const confirmedCount = tour.bookings.filter((b) => b.status === 'confirmed').length;
@@ -415,7 +455,7 @@ function AdminSchedule() {
             return (
               <div
                 key={tour.id}
-                className={`admin-schedule__item card${
+                className={`admin-schedule__item${
                   tour.isCancelled ? ' admin-schedule__item--cancelled' : ''
                 }`}
               >
@@ -424,29 +464,41 @@ function AdminSchedule() {
                   className="admin-schedule__header"
                   onClick={() => toggleExpand(tour.id)}
                   aria-expanded={isOpen}
+                  aria-controls={`tour-details-${tour.id}`}
+                  aria-label={`${formatDateLabel(tour.date)}, ${tour.time} Uhr, ${tour.bookedCount} von ${tour.capacity} Plätze belegt${tour.isCancelled ? ', Storniert' : tour.bookedCount >= tour.capacity ? ', Voll' : ''}`}
                 >
                   <span className="admin-schedule__chevron" aria-hidden="true">
                     {isOpen ? '▾' : '▸'}
                   </span>
-                  <span className="admin-schedule__date">{formatDateLabel(tour.date)}</span>
                   <span className="admin-schedule__time">{tour.time} Uhr</span>
                   <span className="admin-schedule__count">
-                    {tour.bookedCount} / {tour.capacity} Plätze belegt (inkl. vorläufig gehalten) · {confirmedCount} bestätigte Reservationen · {pendingCount} E-Mail-Bestätigungen ausstehend
+                    {tour.bookedCount} / {tour.capacity} Plätze belegt
                   </span>
+                  <span className="admin-schedule__indicators">
                   {tourNewCount > 0 && (
                     <span className="admin-badge admin-badge--new">{tourNewCount} neu (24h)</span>
                   )}
                   <span
                     className={`admin-status-pill ${
-                      tour.isCancelled ? 'admin-status-pill--cancelled' : 'admin-status-pill--ok'
+                      tour.isCancelled ? 'admin-status-pill--cancelled'
+                        : tour.bookedCount >= tour.capacity ? 'admin-status-pill--full' : 'admin-status-pill--ok'
                     }`}
                   >
-                    {tour.isCancelled ? 'Storniert' : 'Aktiv'}
+                    {tour.isCancelled ? 'Storniert' : tour.bookedCount >= tour.capacity ? 'Voll' : `${Math.max(0, tour.capacity - tour.bookedCount)} frei`}
+                  </span>
                   </span>
                 </button>
 
+                <div id={`tour-details-${tour.id}`} hidden={!isOpen}>
                 {isOpen && (
                   <div className="admin-schedule__details">
+                    <div className="admin-schedule__export-row">
+                      <p>{confirmedCount} bestätigt{pendingCount > 0 ? ` · ${pendingCount} E-Mail-Bestätigungen ausstehend` : ''}</p>
+                      <button type="button" className="btn btn--primary btn--sm"
+                        onClick={() => handleExport(tour)} disabled={exporting !== null}>
+                        {exporting === tour.id ? 'Wird erstellt …' : 'Diese Führung als Excel'}
+                      </button>
+                    </div>
                     <div className="admin-schedule__tour-actions">
                       {capacityDraft?.id === tour.id ? (
                         <form className="admin-schedule__capacity-form" onSubmit={(e) => saveCapacity(e, tour)}>
@@ -567,9 +619,13 @@ function AdminSchedule() {
                     )}
                   </div>
                 )}
+                </div>
               </div>
             );
           })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
       </>}
