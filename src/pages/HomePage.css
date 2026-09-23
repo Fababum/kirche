@@ -408,15 +408,64 @@
 
 .booking__pending {
   max-width: 720px;
-  margin: 0 auto 40px;
-  padding: 24px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 56px);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
   background: var(--surface);
+  text-align: center;
+  overflow-wrap: anywhere;
+  scroll-margin-top: 24px;
 }
 
-.home-page .booking__pending h2 {
-  font-size: 24px;
+.home-page .booking__pending h1 {
+  font: 700 clamp(28px, 4vw, 38px)/1.15 var(--font-heading);
   text-transform: none;
+  margin-bottom: 24px;
+}
+
+.booking__mail-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.home-page .booking__receipt-label {
+  color: var(--accent);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.booking__receipt-email {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.booking__receipt-steps {
+  text-align: left;
+  margin: 32px 0;
+  padding-left: 28px;
+}
+
+.booking__receipt-steps li {
+  padding: 6px 0 6px 8px;
+}
+
+.booking__receipt-steps li::marker {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.booking__receipt-notice {
+  padding-block: 24px;
+  border-block: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.booking__pending .btn {
+  margin-top: 20px;
 }
 
 @media (max-width: 900px) {

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { registrationInfo } from '../data/content';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { registrationInfo, secretariat } from '../data/content';
 import { api } from '../api';
 import SchoolClassContact from './SchoolClassContact';
 import './Booking.css';
@@ -40,7 +40,15 @@ function Booking() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [receipt, setReceipt] = useState(null);
+  const receiptRef = useRef(null);
+
+  useEffect(() => {
+    if (receipt) {
+      receiptRef.current?.focus({ preventScroll: true });
+      receiptRef.current?.scrollIntoView({ block: 'start' });
+    }
+  }, [receipt]);
 
   const dateList = useMemo(() => buildDateList(START_DATE, END_DATE), []);
 
@@ -75,14 +83,12 @@ function Booking() {
     if (dayStatus(iso) === 'none') return;
     setSelectedDate(iso);
     setSelectedTour(null);
-    setSuccessMessage('');
     setSubmitError('');
   }
 
   function handleSelectTour(tour) {
     if (tour.isFull) return;
     setSelectedTour(tour);
-    setSuccessMessage('');
     setSubmitError('');
   }
 
@@ -97,19 +103,51 @@ function Booking() {
         ...form,
         groupSize: Number(form.groupSize),
       });
-      setSuccessMessage(result.message);
+      setReceipt({ pending: result?.status === 'pending', email: form.email.trim() });
       setSelectedTour(null);
       setSelectedDate(null);
       setForm({ name: '', email: '', phone: '', groupSize: 5, isSchoolClass: false });
-      // A refresh failure must not look like a failed booking and invite duplicates.
-      api.getTours(START_DATE, END_DATE).then(setTours).catch(() => {
-        setError('Die verfügbaren Plätze konnten nicht aktualisiert werden. Bitte lade die Seite neu. Deine E-Mail-Bestätigung steht weiterhin aus.');
-      });
     } catch (err) {
       setSubmitError(err.message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (receipt) {
+    return (
+      <section id="reservieren" className="section section--warm booking">
+        <div className="container">
+          <div className="booking__pending" ref={receiptRef} tabIndex={-1} aria-labelledby="receipt-title">
+            <svg className="booking__mail-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <rect x="6" y="12" width="36" height="26" rx="2" />
+              <path d="m7 14 17 13 17-13" />
+            </svg>
+            <p className="booking__receipt-label">{receipt.pending ? 'Noch ein Schritt' : 'Anmeldung eingegangen'}</p>
+            <h1 id="receipt-title">{receipt.pending ? 'Bitte bestätige deine E-Mail' : 'Bitte kontaktiere das Sekretariat'}</h1>
+            {receipt.pending ? (
+              <>
+                <p>Wir haben dir einen Bestätigungslink geschickt an</p>
+                <p className="booking__receipt-email">{receipt.email}</p>
+                <ol className="booking__receipt-steps">
+                  <li>Öffne dein E-Mail-Postfach.</li>
+                  <li>Öffne unsere E-Mail und klicke auf den Bestätigungslink.</li>
+                  <li>Bestätige auf der geöffneten Seite deine E-Mail und Reservation.</li>
+                </ol>
+                <p className="booking__receipt-notice"><strong>Deine Reservation ist noch nicht bestätigt.</strong><br />Wir halten deine Plätze 30 Minuten frei. Ohne Bestätigung werden sie wieder freigegeben.</p>
+                <p>Keine E-Mail gefunden? Prüfe bitte auch den Spamordner.</p>
+              </>
+            ) : (
+              <p>Der Server hat deine Anmeldung entgegengenommen, aber den Versand einer Bestätigungs-E-Mail nicht bestätigt. Bitte melde dich bei Susanne Egloff, bevor du erneut buchst, damit keine doppelte Reservation entsteht.</p>
+            )}
+            <p>Falsche Adresse oder Fragen?{' '}<a href={`mailto:${secretariat.email}`}>{secretariat.name}</a> hilft dir weiter:<br />
+              <a href={`tel:${secretariat.phone.replace(/\s/g, '')}`}>{secretariat.phone}</a>.
+            </p>
+            <a href="/" className="btn btn--outline">Zurück zur Webseite</a>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -123,13 +161,6 @@ function Booking() {
           {registrationInfo.notice} {registrationInfo.accessibility}
         </p>
         <p className="booking__notice">Nach der Anmeldung erhältst du eine E-Mail. Bitte bestätige deine Adresse innerhalb von 30 Minuten, damit die Reservation gültig wird.</p>
-        {successMessage && (
-          <div className="booking__pending" role="status">
-            <h2>Bitte E-Mail bestätigen</h2>
-            <p>{successMessage}</p>
-            <p>Prüfe auch den Spamordner. Ohne Bestätigung werden die Plätze nach 30 Minuten wieder freigegeben. Bei einer falschen Adresse kannst du die Anmeldung erneut ausfüllen.</p>
-          </div>
-        )}
 
         {loading && <p>Führungen werden geladen …</p>}
         {error && <p className="booking__error">{error}</p>}
