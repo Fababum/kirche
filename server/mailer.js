@@ -39,7 +39,7 @@ function reservationDetails(booking, tour) {
   ];
 }
 
-export async function sendVisitorVerification(booking, tour, token) {
+export async function sendVisitorVerification(booking, tour, token, expiresAt) {
   const { RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO } = process.env;
   if (!RESEND_API_KEY?.trim()) {
     const error = new Error('Verifikationsmail ist nicht konfiguriert.');
@@ -47,6 +47,10 @@ export async function sendVisitorVerification(booking, tour, token) {
     throw error;
   }
 
+  const deadline = expiresAt === undefined ? null : new Intl.DateTimeFormat('de-CH', {
+    timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).format(expiresAt);
   const resend = new Resend(RESEND_API_KEY);
   const { data, error } = await resend.emails.send({
     from: MAIL_FROM || DEFAULT_MAIL_FROM,
@@ -55,12 +59,15 @@ export async function sendVisitorVerification(booking, tour, token) {
     subject: 'Bitte bestätige deine E-Mail-Adresse für den Osterweg Wyland',
     ...renderMail({
       title: 'Bitte bestätige deine E-Mail-Adresse',
-      preheader: 'Deine Reservation ist noch offen. Bitte bestätige sie innerhalb von 30 Minuten.',
+      preheader: deadline
+        ? `Deine Reservation ist noch offen. Bitte bestätige sie bis ${deadline} Uhr (Schweizer Zeit).`
+        : 'Deine Reservation ist noch offen. Bitte bestätige sie innerhalb von 30 Minuten ab der Anmeldung.',
       greeting: `Hallo ${booking.name}`,
       paragraphs: [
         'Deine Reservation ist noch nicht bestätigt. Wir halten deine Plätze ab der Anmeldung für 30 Minuten frei.',
+        ...(deadline ? [`Bitte bestätige bis ${deadline} Uhr (Schweizer Zeit). Auch bei erneutem Versand bleibt diese ursprüngliche Frist unverändert.`] : []),
         'Öffne die Bestätigungsseite und bestätige dort deine E-Mail-Adresse und Reservation. Das Öffnen des Links allein bestätigt noch nichts.',
-        'Nur wenn du deine Reservation nicht innerhalb von 30 Minuten bestätigst, verfällt sie und die Plätze werden automatisch wieder freigegeben. Bereits bestätigte Reservationen bleiben bestehen.',
+        'Nur wenn du deine Reservation nicht innerhalb von 30 Minuten ab der Anmeldung bestätigst, verfällt sie und die Plätze werden automatisch wieder freigegeben. Bereits bestätigte Reservationen bleiben bestehen.',
       ],
       details: reservationDetails(booking, tour),
       action: { label: 'Zur Bestätigungsseite', url: publicUrl(`/reservation/bestaetigen#token=${token}`) },

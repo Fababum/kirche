@@ -53,6 +53,7 @@ export async function downloadBookingsExcel(bookings, tour = null) {
   ];
 
   const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Reservationen');
   if (tour) {
     const overview = XLSX.utils.aoa_to_sheet([
       ['Führung', 'Osterweg Wyland'],
@@ -66,7 +67,6 @@ export async function downloadBookingsExcel(bookings, tour = null) {
     overview['!cols'] = [{ wch: 34 }, { wch: 24 }];
     XLSX.utils.book_append_sheet(workbook, overview, 'Führung');
   }
-  XLSX.utils.book_append_sheet(workbook, sheet, 'Reservationen');
 
   const filename = tour
     ? `fuehrung-${tour.date}-${tour.time.replace(':', '-')}-${tour.id}.xlsx`

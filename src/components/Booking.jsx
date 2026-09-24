@@ -43,6 +43,12 @@ function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [receipt, setReceipt] = useState(null);
+  const [resendAt, setResendAt] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [resendError, setResendError] = useState('');
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendStopped, setResendStopped] = useState(false);
+  const resendingRef = useRef(false);
   const receiptRef = useRef(null);
   const submittingRef = useRef(false);
   const selectedTour = tours.find((tour) => tour.id === selectedTourId);
@@ -52,6 +58,12 @@ function Booking() {
       receiptRef.current?.focus({ preventScroll: true });
       receiptRef.current?.scrollIntoView({ block: 'start' });
     }
+  }, [receipt]);
+
+  useEffect(() => {
+    if (!receipt) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
   }, [receipt]);
 
   const dateList = useMemo(() => buildDateList(EVENT_START_DATE, EVENT_END_DATE), []);
@@ -144,7 +156,10 @@ function Booking() {
         ...form,
         groupSize: Number(form.groupSize),
       });
-      setReceipt({ pending: result?.status === 'pending', email: form.email.trim() });
+      setNow(Date.now());
+      setResendAt(Date.now() + result.retryAfter * 1000);
+      setReceipt({ pending: result.status === 'pending', email: form.email.trim(),
+        resendToken: result.resendToken, expiresAt: result.expiresAt });
       setSelectedTourId(null);
       setSelectedDate(null);
       setForm({ name: '', email: '', phone: '', groupSize: 1, isSchoolClass: false });
@@ -157,7 +172,30 @@ function Booking() {
     }
   }
 
+  async function handleResend() {
+    if (resendingRef.current || resendStopped || Date.now() < resendAt || Date.now() >= receipt.expiresAt) return;
+    resendingRef.current = true;
+    setResending(true);
+    setResendError('');
+    setResendMessage('');
+    try {
+      const result = await api.resendVerification(receipt.resendToken);
+      setResendAt(Date.now() + result.retryAfter * 1000);
+      setResendMessage('Die Bestätigungs-E-Mail wurde erneut gesendet. Die ursprüngliche Bestätigungsfrist bleibt unverändert.');
+    } catch (err) {
+      setResendError(err.message);
+      setResendAt(Date.now() + (err.retryAfter || 20) * 1000);
+      if ([400, 403, 409, 410].includes(err.status)) setResendStopped(true);
+    } finally {
+      setNow(Date.now());
+      resendingRef.current = false;
+      setResending(false);
+    }
+  }
+
   if (receipt) {
+    const resendSeconds = Math.max(0, Math.ceil((resendAt - now) / 1000));
+    const expired = now >= receipt.expiresAt;
     return (
       <section id="reservieren" className="section section--warm booking">
         <div className="container">
@@ -179,6 +217,17 @@ function Booking() {
                 </ol>
                 <p className="booking__receipt-notice"><strong>Deine Reservation ist noch nicht bestätigt.</strong><br />Wir halten deine Plätze 30 Minuten frei. Ohne Bestätigung werden sie wieder freigegeben.</p>
                 <p>Keine E-Mail gefunden? Prüfe bitte auch den Spamordner.</p>
+                {expired ? (
+                  <p role="status">Die Bestätigungsfrist ist abgelaufen. Falls du noch nicht bestätigt hast, wurden deine Plätze wieder freigegeben.</p>
+                ) : !resendStopped && (
+                  <button type="button" className="btn btn--outline" onClick={handleResend}
+                    disabled={resending || resendSeconds > 0}>
+                    {resending ? 'Wird gesendet …' : resendSeconds > 0
+                      ? `Erneut senden in ${resendSeconds} Sekunden` : 'E-Mail erneut senden'}
+                  </button>
+                )}
+                {resendMessage && <p role="status">{resendMessage}</p>}
+                {resendError && <p className="booking__error" role="alert">{resendError}</p>}
               </>
             ) : (
               <p>Der Server hat deine Anmeldung entgegengenommen, aber den Versand einer Bestätigungs-E-Mail nicht bestätigt. Bitte melde dich bei Susanne Egloff, bevor du erneut buchst, damit keine doppelte Reservation entsteht.</p>
@@ -308,9 +357,13 @@ function Booking() {
 
             <div className="booking__form-row">
               <label>
-                Telefon
+                Telefon *
                 <input
+                  required
                   type="tel"
+                  autoComplete="tel"
+                  maxLength={50}
+                  aria-describedby="booking-phone-hint"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
@@ -327,6 +380,10 @@ function Booking() {
                 />
               </label>
             </div>
+
+            <p id="booking-phone-hint" className="booking__form-footnote">
+              Die Telefonnummer benötigen wir für Rückfragen und kurzfristige Absagen.
+            </p>
 
             <label className="booking__checkbox">
               <input

@@ -48,14 +48,14 @@ function Datenschutz() {
             <ul>
               <li>Name</li>
               <li>E-Mail-Adresse</li>
-              <li>Telefonnummer (falls angegeben)</li>
+              <li>Telefonnummer</li>
               <li>Anzahl Personen und ob es sich um eine Schulklasse handelt</li>
               <li>Bestätigungsstatus der E-Mail-Adresse sowie ein gehashter, zeitlich begrenzter Bestätigungscode</li>
               <li>Allfällige Bemerkung, die du im Formular hinterlässt</li>
             </ul>
             <p>
               Diese Angaben brauchen wir, um deine Reservation zu organisieren, dir eine
-              Bestätigung zu senden und dich bei Fragen zu deinem Besuch zu kontaktieren. Die
+              Bestätigung zu senden und dich bei Fragen zu deinem Besuch oder kurzfristigen Absagen zu kontaktieren. Die
               Bearbeitung erfolgt zur Erfüllung dieser Vereinbarung mit dir - eine gesonderte
               Einwilligung ist dafür nach Schweizer Recht nicht nötig, indem du das Formular
               ausfüllst und absendest, willigst du aber ausdrücklich in diese Verwendung ein.
@@ -77,7 +77,9 @@ function Datenschutz() {
             <p>
               Für den Versand von Bestätigungs- und Benachrichtigungs-E-Mails nutzen wir den
               Dienst <a href="https://resend.com" target="_blank" rel="noreferrer">Resend</a>{' '}
-              (Plus Five Five, Inc., USA). Deine E-Mail-Adresse und dein Name werden dafür in die{' '}
+              (Plus Five Five, Inc., USA). Deine E-Mail-Adresse, dein Name und die in der
+              Benachrichtigung an die Kirche enthaltenen Reservationsangaben einschliesslich
+              deiner Telefonnummer werden dafür in die{' '}
               <strong>USA</strong> übermittelt. Die USA gelten aus Schweizer Sicht nicht generell
               als Land mit angemessenem Datenschutzniveau; Resend sichert jedoch angemessene
               Schutzmassnahmen zu (u.a. Verschlüsselung der Übertragung, vertragliche

@@ -72,6 +72,22 @@ test('verification rejects provider errors, missing acceptance ID, and network e
   }
 });
 
+test('resent verification states the absolute original Zurich deadline, never a new 30-minute window', async () => {
+  process.env.RESEND_API_KEY = 're_test_only';
+  process.env.TZ = 'America/Los_Angeles';
+  const expiresAt = Date.parse('2027-03-01T12:30:00Z');
+  await sendVisitorVerification(booking, tour, token, expiresAt);
+  await sendVisitorVerification(booking, tour, 'cd'.repeat(32), expiresAt);
+  for (const { mail } of requests) {
+    for (const content of [mail.html, mail.text]) {
+      assert.match(content, /01\.03\.2027, 13:30:00 Uhr \(Schweizer Zeit\)/);
+      assert.match(content, /ab der Anmeldung für 30 Minuten/);
+      assert.match(content, /Auch bei erneutem Versand bleibt diese ursprüngliche Frist unverändert/);
+      assert.doesNotMatch(content, /innerhalb von 30 Minuten bestätigst/);
+    }
+  }
+});
+
 test('verification preserves numeric provider status without exposing diagnostics', async (t) => {
   process.env.RESEND_API_KEY = 're_test_only';
   const post = t.mock.method(Resend.prototype, 'post');
@@ -204,7 +220,7 @@ test('all three messages share accessible email-safe HTML and equivalent plain t
     assert.match(content, /Hallo Test Visitor/);
     assert.match(content, /noch nicht bestätigt/);
     assert.match(content, /Das Öffnen des Links allein bestätigt noch nichts/);
-    assert.match(content, /Nur wenn du deine Reservation nicht innerhalb von 30 Minuten bestätigst, verfällt sie und die Plätze werden automatisch wieder freigegeben/);
+    assert.match(content, /Nur wenn du deine Reservation nicht innerhalb von 30 Minuten ab der Anmeldung bestätigst, verfällt sie und die Plätze werden automatisch wieder freigegeben/);
     assert.match(content, /Bereits bestätigte Reservationen bleiben bestehen/);
     assert.doesNotMatch(content, /\?token=|Danach werden die Plätze/);
   }

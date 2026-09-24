@@ -7,10 +7,12 @@ const tour = {
   freeSpots: 11, isFull: false, isBookingClosed: false,
   bookingClosesAt: '2027-03-15T13:00:00.000Z',
 };
-const booking = { tourId: 1, name: 'Visitor', email: 'visitor@example.test', groupSize: 2 };
+const booking = { tourId: 1, name: 'Visitor', email: 'visitor@example.test', phone: '+41 79 123 45 67', groupSize: 2 };
+const receipt = { id: 7, status: 'pending', resendToken: 'a'.repeat(64), retryAfter: 20, expiresAt: 1803904200000 };
 const endpoints = [
   { call: () => api.getTours('2027-03-17', '2027-03-28'), path: '/tours?from=2027-03-17&to=2027-03-28', result: [tour] },
-  { call: () => api.createBooking(booking), path: '/bookings', method: 'POST', body: booking, result: { id: 7, status: 'pending' }, status: 201 },
+  { call: () => api.createBooking(booking), path: '/bookings', method: 'POST', body: booking, result: receipt, status: 201 },
+  { call: () => api.resendVerification(receipt.resendToken), path: '/bookings/resend-verification', method: 'POST', body: { resendToken: receipt.resendToken }, result: { status: 'pending', retryAfter: 20 } },
   { call: () => api.confirmBooking('token'), path: '/bookings/confirm', method: 'POST', body: { token: 'token' }, result: { status: 'confirmed' } },
   { call: () => api.login('admin', 'password'), path: '/admin/login', method: 'POST', body: { username: 'admin', password: 'password' }, result: { username: 'admin' } },
   { call: () => api.logout(), path: '/admin/logout', method: 'POST', result: { ok: true } },
@@ -145,11 +147,27 @@ test('valid tour lists retain backend date and closure decisions, including zero
 test('createBooking accepts only pending with a positive safe integer id', async () => {
   for (const body of [
     {}, [], { id: 1 }, { status: 'pending' },
-    ...['confirmed', 'cancelled', 'expired', 'unknown', null].map((status) => ({ id: 1, status })),
-    ...[null, 0, -1, 1.5, '1', Number.MAX_SAFE_INTEGER + 1].map((id) => ({ id, status: 'pending' })),
+    ...['confirmed', 'cancelled', 'expired', 'unknown', null].map((status) => ({ ...receipt, status })),
+    ...[null, 0, -1, 1.5, '1', Number.MAX_SAFE_INTEGER + 1].map((id) => ({ ...receipt, id })),
+    ...[null, undefined, '', 'token', 'g'.repeat(64), 123].map((resendToken) => ({ ...receipt, resendToken })),
+    ...[null, undefined, 0, -1, 1.5, '20'].flatMap((value) => [
+      { ...receipt, retryAfter: value }, { ...receipt, expiresAt: value },
+    ]),
   ]) {
     globalThis.fetch.mock.mockImplementation(async () => Response.json(body));
     await assert.rejects(api.createBooking(booking), assertUnclearOutcome);
+  }
+});
+
+test('resend validates cooldown metadata and preserves server retry delays on errors', async () => {
+  for (const body of [{}, { status: 'confirmed', retryAfter: 20 },
+    ...[undefined, null, 0, -1, 1.5, '20'].map((retryAfter) => ({ status: 'pending', retryAfter }))]) {
+    globalThis.fetch.mock.mockImplementation(async () => Response.json(body));
+    await assert.rejects(api.resendVerification(receipt.resendToken), assertUnclearOutcome);
+  }
+  for (const status of [429, 503]) {
+    globalThis.fetch.mock.mockImplementation(async () => Response.json({ error: 'Bitte warten', retryAfter: 20 }, { status }));
+    await assert.rejects(api.resendVerification(receipt.resendToken), { status, message: 'Bitte warten', retryAfter: 20 });
   }
 });
 

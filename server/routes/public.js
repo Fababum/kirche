@@ -13,6 +13,13 @@ import { EVENT_START_DATE, EVENT_END_DATE, BOOKING_CUTOFF_HOURS } from '../../sh
 const router = Router();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RESEND_COOLDOWN_SECONDS = 20;
+const MAX_RESEND_ATTEMPTS = 3;
+
+router.use('/bookings', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 
 const zurichTime = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -115,7 +122,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
 
   const trimmedName = String(name).trim();
   const trimmedEmail = String(email).trim();
-  const trimmedPhone = phone ? String(phone).trim() : '';
+  const trimmedPhone = typeof phone === 'string' ? phone.trim() : '';
   const trimmedNote = note ? String(note).trim() : '';
 
   if (trimmedName.length === 0 || trimmedName.length > 200) {
@@ -123,6 +130,9 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
   }
   if (!EMAIL_REGEX.test(trimmedEmail) || trimmedEmail.length > 200) {
     return res.status(400).json({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' });
+  }
+  if (!trimmedPhone) {
+    return res.status(400).json({ error: 'Bitte eine Telefonnummer für Rückfragen und kurzfristige Absagen angeben.' });
   }
   if (trimmedPhone.length > 50) {
     return res.status(400).json({ error: 'Telefonnummer ist zu lang.' });
@@ -138,6 +148,8 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
 
   const token = randomBytes(32).toString('hex');
   const tokenHash = createHash('sha256').update(token).digest('hex');
+  const resendToken = randomBytes(32).toString('hex');
+  const resendHash = createHash('sha256').update(resendToken).digest('hex');
   const result = db.transaction(() => {
     expirePendingBookings();
     const tour = db.prepare('SELECT * FROM tours WHERE id = ? AND is_cancelled = 0').get(tourId);
@@ -157,21 +169,23 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     }
     const inserted = db.prepare(`
       INSERT INTO bookings (tour_id, name, email, phone, group_size, is_school_class, note,
-        status, verification_token_hash, verification_expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        status, verification_token_hash, verification_expires_at, resend_token_hash, resend_available_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
     `).run(
       tourId,
       trimmedName,
       trimmedEmail,
-      trimmedPhone || null,
+      trimmedPhone,
       size,
       isSchoolClass ? 1 : 0,
       trimmedNote || null,
       tokenHash,
-      now + VERIFICATION_TTL_MS
+      now + VERIFICATION_TTL_MS,
+      resendHash,
+      now + RESEND_COOLDOWN_SECONDS * 1000
     );
     db.prepare('UPDATE tours SET booked_count = booked_count + ? WHERE id = ?').run(size, tourId);
-    return { id: inserted.lastInsertRowid, tour };
+    return { id: inserted.lastInsertRowid, tour, expiresAt: now + VERIFICATION_TTL_MS };
   }).immediate();
   if (result.error) return res.status(result.code).json({ error: result.error });
 
@@ -184,7 +198,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     note: trimmedNote,
   };
   try {
-    await sendVisitorVerification(bookingForMail, result.tour, token);
+    await sendVisitorVerification(bookingForMail, result.tour, token, result.expiresAt);
   } catch (err) {
     // Never hold a SQLite transaction open over network I/O. Compensate atomically;
     // an expiry/cancellation racing the send must not release these seats twice.
@@ -217,8 +231,90 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
   res.status(201).json({
     id: result.id,
     status: 'pending',
+    resendToken,
+    retryAfter: RESEND_COOLDOWN_SECONDS,
+    expiresAt: result.expiresAt,
     message: 'Bitte bestätige deine E-Mail-Adresse über die soeben gesendete E-Mail innerhalb von 30 Minuten. Bis dahin halten wir deine Plätze frei; erst danach ist die Reservation bestätigt.',
   });
+});
+
+const resendRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    const retryAfter = Math.max(1, Math.ceil((req.rateLimit.resetTime.getTime() - Date.now()) / 1000));
+    res.setHeader('Retry-After', retryAfter);
+    res.status(429).json({ error: 'Zu viele Versandversuche. Bitte später erneut versuchen.', retryAfter });
+  },
+});
+
+router.post('/bookings/resend-verification', resendRateLimiter, async (req, res) => {
+  const { resendToken } = req.body || {};
+  const invalid = { code: 400, error: 'Diese Anfrage zum erneuten Versand ist ungültig.' };
+  if (typeof resendToken !== 'string' || !/^[a-f0-9]{64}$/.test(resendToken)) {
+    return res.status(invalid.code).json({ error: invalid.error });
+  }
+  const hash = createHash('sha256').update(resendToken).digest('hex');
+  const result = db.transaction(() => {
+    const now = Date.now();
+    expirePendingBookings(now);
+    const booking = db.prepare('SELECT * FROM bookings WHERE resend_token_hash = ?').get(hash);
+    if (!booking) return invalid;
+    if (booking.status === 'expired') {
+      return { code: 410, error: 'Die Reservation ist abgelaufen. Bitte reserviere erneut.' };
+    }
+    const tour = db.prepare('SELECT * FROM tours WHERE id = ?').get(booking.tour_id);
+    if (booking.status !== 'pending' || !tour || tour.is_cancelled) {
+      return { code: 409, error: 'Die Reservation ist bereits bestätigt oder die Reservation oder Führung wurde storniert.' };
+    }
+    if (booking.resend_count >= MAX_RESEND_ATTEMPTS) {
+      return { code: 403, error: 'Die Bestätigungs-E-Mail kann höchstens dreimal erneut angefordert werden. Bitte prüfe auch deinen Spam-Ordner oder kontaktiere uns.' };
+    }
+    if (now < booking.resend_available_at) {
+      return { code: 429, error: 'Bitte warte kurz, bevor du die Bestätigungs-E-Mail erneut anforderst.',
+        retryAfter: Math.ceil((booking.resend_available_at - now) / 1000) };
+    }
+    const token = randomBytes(32).toString('hex');
+    // Commit the attempt and its link before network I/O, including failed sends.
+    db.prepare('UPDATE bookings SET resend_count = resend_count + 1, resend_available_at = ? WHERE id = ?')
+      .run(now + RESEND_COOLDOWN_SECONDS * 1000, booking.id);
+    db.prepare('INSERT INTO booking_verification_tokens (token_hash, booking_id) VALUES (?, ?)')
+      .run(createHash('sha256').update(token).digest('hex'), booking.id);
+    return { booking, tour, token };
+  }).immediate();
+  if (result.error) {
+    const { code, error, retryAfter } = result;
+    if (retryAfter) res.setHeader('Retry-After', retryAfter);
+    return res.status(code).json({ error, ...(retryAfter ? { retryAfter } : {}) });
+  }
+
+  const { booking, tour, token } = result;
+  try {
+    await sendVisitorVerification({
+      name: booking.name, email: booking.email, phone: booking.phone,
+      groupSize: booking.group_size, isSchoolClass: !!booking.is_school_class, note: booking.note,
+    }, tour, token, booking.verification_expires_at);
+  } catch {
+    // Delivery can be uncertain. Keep the reservation and every issued link intact.
+    console.error('[bookings] Erneuter Versand der Verifikationsmail fehlgeschlagen.');
+    res.setHeader('Retry-After', RESEND_COOLDOWN_SECONDS);
+    return res.status(503).json({
+      error: 'Die Bestätigungs-E-Mail konnte derzeit nicht erneut versendet werden. Deine Plätze bleiben bis zum ursprünglichen Ablauf reserviert. Bitte prüfe auch die erste E-Mail und deinen Spam-Ordner.',
+      retryAfter: RESEND_COOLDOWN_SECONDS,
+    });
+  }
+  expirePendingBookings();
+  const current = db.prepare('SELECT status FROM bookings WHERE id = ?').get(booking.id);
+  if (current?.status === 'expired') {
+    return res.status(410).json({ error: 'Die Reservation ist abgelaufen. Bitte reserviere erneut.' });
+  }
+  if (current?.status !== 'pending' || db.prepare('SELECT is_cancelled FROM tours WHERE id = ?').get(tour.id)?.is_cancelled) {
+    return res.status(409).json({ error: 'Die Reservation ist bereits bestätigt oder die Reservation oder Führung wurde storniert.' });
+  }
+  res.json({ status: 'pending', retryAfter: RESEND_COOLDOWN_SECONDS,
+    message: 'Die Bestätigungs-E-Mail wurde erneut gesendet. Die ursprüngliche Bestätigungsfrist bleibt unverändert.' });
 });
 
 const confirmationRateLimiter = rateLimit({
@@ -241,7 +337,9 @@ router.post('/bookings/confirm', confirmationRateLimiter, async (req, res) => {
   const hash = createHash('sha256').update(token).digest('hex');
   const result = db.transaction(() => {
     expirePendingBookings();
-    const booking = db.prepare('SELECT * FROM bookings WHERE verification_token_hash = ?').get(hash);
+    const booking = db.prepare(`SELECT * FROM bookings WHERE verification_token_hash = ?
+      OR id = (SELECT booking_id FROM booking_verification_tokens WHERE token_hash = ?)`)
+      .get(hash, hash);
     if (!booking) return invalid;
     if (booking.status === 'expired') {
       return { code: 410, error: 'Der Bestätigungslink ist abgelaufen. Bitte reserviere erneut.' };

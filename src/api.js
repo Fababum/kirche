@@ -50,6 +50,7 @@ async function request(path, options = {}, validate = () => true) {
     const message = typeof body?.error === 'string' && body.error.trim() ? body.error : `Fehler (${res.status})`;
     const error = new Error(message);
     error.status = res.status;
+    if (Number.isSafeInteger(body?.retryAfter) && body.retryAfter > 0) error.retryAfter = body.retryAfter;
     throw error;
   }
 
@@ -65,7 +66,13 @@ export const api = {
     (body) => Array.isArray(body) && body.every(isPublicTour)),
   createBooking: (data) =>
     request('/bookings', { method: 'POST', body: JSON.stringify(data) },
-      (body) => body.status === 'pending' && Number.isSafeInteger(body.id) && body.id > 0),
+      (body) => body.status === 'pending' && Number.isSafeInteger(body.id) && body.id > 0
+        && typeof body.resendToken === 'string' && /^[a-f0-9]{64}$/.test(body.resendToken)
+        && Number.isSafeInteger(body.retryAfter) && body.retryAfter > 0
+        && Number.isSafeInteger(body.expiresAt) && body.expiresAt > 0),
+  resendVerification: (resendToken) =>
+    request('/bookings/resend-verification', { method: 'POST', body: JSON.stringify({ resendToken }) },
+      (body) => body.status === 'pending' && Number.isSafeInteger(body.retryAfter) && body.retryAfter > 0),
   confirmBooking: (token) =>
     request('/bookings/confirm', { method: 'POST', body: JSON.stringify({ token }) },
       (body) => body.status === 'confirmed'),

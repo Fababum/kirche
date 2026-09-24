@@ -62,7 +62,7 @@ export const costsInfo = {
 
 export const travelInfo = {
   heading: "Anreise & Parken",
-  text: "Parkplätze bei der Kirche vorhanden. Postauto ab Ossingen oder Marthalen.",
+  text: "Parkplätze bei der Kirche begrenzt vorhanden.",
   publicTransport: "Postauto-Linie 621 ab Bahnhof Ossingen oder Bahnhof Marthalen, Haltestelle Truttikon.",
 };
 
@@ -117,7 +117,7 @@ export const volunteerAreas = [
   },
   {
     key: "kafi-team",
-    title: '"Kafi"-Team',
+    title: '«Kafi»-Team',
     period: "12.-17. März 2027",
     description: "Empfange Gäste im Kafi mit Getränk und Gespräch.",
     contact: {
@@ -153,7 +153,7 @@ export const volunteerAreas = [
 export const downloadSection = {
   heading: "Werbematerial",
   title: "Flyer herunterladen",
-  text: "Flyer, Plakat und Banner zum Weitergeben und Aufhängen.",
+  text: "Flyer, Plakat und Banner. Weitergeben und Veröffentlichen.",
   linkHref: "/downloads/osterweg-wyland-flyer.zip",
   linkLabel: "Flyer herunterladen",
 };

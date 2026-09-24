@@ -232,6 +232,10 @@ Unter `/admin` sieht das Sekretariat die Führungen mit ihren Reservationen:
   Führungen (einschliesslich stornierter Reservationen) als `.xlsx`-Datei
   herunterladen (öffnet direkt in Excel/LibreOffice/Numbers, z.B. zum
   Ausdrucken oder Weiterverarbeiten).
+- Unter Datum und Uhrzeit kann mit "Diese Führung als Excel" die Reservationsliste
+  einer einzelnen Führung mit Name, E-Mail, Telefon und Reservationsstatus exportiert werden.
+  Das erste Tabellenblatt enthält dieselben Spalten wie der Gesamtexport;
+  die Führungsübersicht steht im zweiten Tabellenblatt.
 - Zusätzlich wird erst nach E-Mail-Bestätigung eine Benachrichtigung an
   `NOTIFY_EMAIL` versucht (siehe Setup-Schritt 5b). Der Admin-Bereich bleibt
   die verlässliche Übersicht der gespeicherten Reservationen, auch bei
@@ -244,6 +248,16 @@ Unter `/admin` sieht das Sekretariat die Führungen mit ihren Reservationen:
   die Verifikationsmail angenommen hat, folgt `201 {id, status: "pending",
   message}`. Bei fehlender Mailkonfiguration oder Versandfehler folgt `503`
   statt einer Erfolgsmeldung; die Reservation bleibt als `cancelled` erhalten.
+- `phone` ist für neue Reservationen obligatorisch: ein nichtleerer String mit
+  maximal 50 Zeichen nach Entfernen äusserer Leerzeichen. Ungültige Angaben liefern
+  `400 {error}`. Bestehende Reservationen ohne Telefonnummer bleiben verwaltbar.
+- Die Erstellungsantwort enthält zusätzlich `resendToken`, `retryAfter` (20 Sekunden)
+  und `expiresAt` (ursprüngliche Bestätigungsfrist als Unix-Zeit in Millisekunden).
+  Auf der Seite nach der Anmeldung ist nach 20 Sekunden "E-Mail erneut senden" verfügbar.
+  `POST /api/bookings/resend-verification` mit `{resendToken}` sendet ausschliesslich
+  an die gespeicherte Adresse, maximal dreimal zusätzlich und mit serverseitiger
+  20-Sekunden-Sperre pro Versuch. Die Frist und belegten Plätze ändern sich nicht;
+  bisherige Bestätigungslinks bleiben gültig, auch bei einem Versandfehler.
 - Der Mail-Link lautet
   `${PUBLIC_URL}/reservation/bestaetigen#token=<hex>`. Der Token besteht aus
   32 kryptografisch zufälligen Bytes (`randomBytes`), hexadezimal codiert.

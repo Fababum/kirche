@@ -9,7 +9,7 @@ function Volunteer() {
       <div className="container">
         <div className="section-heading">
           <h2>Mitarbeiten und Teil davon werden</h2>
-          <p>Teil davon werden. Melde dich direkt bei der zuständigen Kontaktperson.</p>
+          <p>Melde dich direkt bei der zuständigen Kontaktperson.</p>
         </div>
 
         <div className="volunteer__grid">

@@ -29,7 +29,7 @@ let mails;
 let mailResult;
 let client = 0;
 const adminCookie = `${COOKIE_NAME}=${jwt.sign({ id: 1, username: 'test' }, testEnv.JWT_SECRET)}`;
-const bookingBody = { tourId: 1, name: 'Test Visitor', email: 'visitor@example.test', groupSize: 2 };
+const bookingBody = { tourId: 1, name: 'Test Visitor', email: 'visitor@example.test', phone: '+41 79 123 45 67', groupSize: 2 };
 
 before(async () => {
   const app = express();
@@ -65,20 +65,20 @@ beforeEach((t) => {
   t.mock.method(console, 'warn', () => {});
 });
 
-function request(path, { method = 'GET', body } = {}) {
+function request(path, { method = 'GET', body, ip } = {}) {
   return new Promise((resolve, reject) => {
     const req = httpRequest({
       hostname: '127.0.0.1', port: server.address().port, path, method,
       headers: {
         'Content-Type': 'application/json', Cookie: adminCookie,
         // Each request has its own test IP so rate limits do not mask assertions.
-        'X-Forwarded-For': `192.0.${Math.floor(++client / 250)}.${client % 250 + 1}`,
+        'X-Forwarded-For': ip || `192.0.${Math.floor(++client / 250)}.${client % 250 + 1}`,
       },
     }, (res) => {
       let text = '';
       res.setEncoding('utf8');
       res.on('data', (chunk) => { text += chunk; });
-      res.on('end', () => resolve({ status: res.statusCode, body: text.startsWith('{') || text.startsWith('[') ? JSON.parse(text) : text, text }));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: text.startsWith('{') || text.startsWith('[') ? JSON.parse(text) : text, text }));
       res.on('error', reject);
     });
     req.on('error', reject);
@@ -88,6 +88,9 @@ function request(path, { method = 'GET', body } = {}) {
 
 const create = (body = {}) => request('/api/bookings', { method: 'POST', body: { ...bookingBody, ...body } });
 const confirm = (token) => request('/api/bookings/confirm', { method: 'POST', body: { token } });
+const resend = (resendToken, options = {}) => request('/api/bookings/resend-verification', {
+  method: 'POST', body: { resendToken }, ...options,
+});
 const patch = (path, body) => request(`/api/admin/${path}`, { method: 'PATCH', body });
 const row = () => db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 1').get();
 const seats = () => db.prepare('SELECT booked_count FROM tours WHERE id = 1').get().booked_count;
@@ -108,25 +111,44 @@ test('additive migration preserves old confirmed bookings and seat counts, and i
     migrateVerification(legacy);
     assert.deepEqual(legacy.prepare('SELECT * FROM bookings').get(), {
       ...oldBooking, verification_token_hash: null, verification_expires_at: null,
+      resend_token_hash: null, resend_available_at: 0, resend_count: 0,
     });
     assert.equal(legacy.prepare('SELECT booked_count FROM tours').get().booked_count, 3);
     assert.equal(legacy.pragma('table_info(bookings)').find((c) => c.name === 'verification_expires_at').type, 'INTEGER');
+    legacy.prepare(`UPDATE bookings SET verification_token_hash = ?, verification_expires_at = ?,
+      resend_token_hash = ?, resend_available_at = ?, resend_count = 2`).run('original-hash', 123456, 'resend-hash', 123000);
+    legacy.prepare('INSERT INTO booking_verification_tokens VALUES (?, 1)').run('additional-hash');
+    const migrated = legacy.prepare('SELECT * FROM bookings').get();
+    migrateVerification(legacy);
+    assert.deepEqual(legacy.prepare('SELECT * FROM bookings').get(), migrated);
+    assert.deepEqual(legacy.prepare('SELECT * FROM booking_verification_tokens').all(), [{ token_hash: 'additional-hash', booking_id: 1 }]);
   } finally {
     legacy.close();
   }
 });
 
-test('creation holds seats for 30 minutes and exposes neither token nor hash in API/admin', async () => {
+test('creation returns resend metadata, holds seats for 30 minutes and keeps verification secrets out of API/admin', async () => {
   const start = Date.now();
   const response = await create();
   assert.equal(response.status, 201);
-  assert.deepEqual(Object.keys(response.body).sort(), ['id', 'message', 'status']);
+  assert.deepEqual(Object.keys(response.body).sort(), ['expiresAt', 'id', 'message', 'resendToken', 'retryAfter', 'status']);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(response.body.retryAfter, 20);
+  assert.equal(response.body.expiresAt, start + VERIFICATION_TTL_MS);
+  assert.match(response.body.resendToken, /^[a-f0-9]{64}$/);
   assert.equal(response.body.status, 'pending');
   assert.equal(mails.length, 1);
   const token = tokenFrom();
   const stored = row();
   assert.equal(stored.status, 'pending');
   assert.equal(stored.verification_token_hash, createHash('sha256').update(token).digest('hex'));
+  assert.equal(stored.resend_token_hash, createHash('sha256').update(response.body.resendToken).digest('hex'));
+  assert.notEqual(stored.resend_token_hash, stored.verification_token_hash);
+  assert.notEqual(response.body.resendToken, token);
+  assert.equal(stored.resend_available_at, start + 20000);
+  assert.equal(stored.resend_count, 0);
+  assert.ok(!JSON.stringify(stored).includes(response.body.resendToken));
+  assert.ok(!JSON.stringify(mails).includes(response.body.resendToken));
   assert.ok(stored.verification_expires_at >= start + VERIFICATION_TTL_MS);
   assert.ok(stored.verification_expires_at <= Date.now() + VERIFICATION_TTL_MS);
   assert.ok(!JSON.stringify(stored).includes(token));
@@ -142,7 +164,219 @@ test('creation holds seats for 30 minutes and exposes neither token nor hash in 
     assert.ok(!result.text.includes(token));
     assert.ok(!result.text.includes(stored.verification_token_hash));
     assert.ok(!result.text.includes('verification_token_hash'));
+    assert.ok(!result.text.includes(stored.resend_token_hash));
+    assert.ok(!result.text.includes('resend_token_hash'));
   }
+  assert.ok(!admin.text.includes(response.body.resendToken));
+  assert.equal((await confirm(response.body.resendToken)).status, 400);
+  assert.equal(row().status, 'pending');
+});
+
+test('resend enforces the exact 20-second boundary without changing seats, reservation or expiry', async () => {
+  const start = Date.now();
+  const created = await create();
+  const original = row();
+  const { resendToken, expiresAt } = created.body;
+  for (const [elapsed, retryAfter] of [[0, 20], [19000, 1], [19999, 1]]) {
+    Date.now.mock.mockImplementation(() => start + elapsed);
+    const response = await resend(resendToken);
+    assert.equal(response.status, 429);
+    assert.equal(response.body.retryAfter, retryAfter);
+    assert.equal(response.headers['retry-after'], String(retryAfter));
+    assert.equal(response.headers['cache-control'], 'no-store');
+    assert.deepEqual(row(), original);
+  }
+  Date.now.mock.mockImplementation(() => start + 20000);
+  const response = await resend(resendToken);
+  assert.equal(response.status, 200);
+  assert.deepEqual(Object.keys(response.body).sort(), ['message', 'retryAfter', 'status']);
+  assert.equal(response.body.status, 'pending');
+  assert.equal(response.body.retryAfter, 20);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(row().verification_expires_at, expiresAt);
+  assert.deepEqual(row(), { ...original, resend_count: 1, resend_available_at: start + 40000 });
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM bookings').get().count, 1);
+  assert.equal(seats(), 2);
+  assert.equal(mails.length, 2);
+  assert.notEqual(tokenFrom(mails[1]), tokenFrom());
+  const issued = db.prepare('SELECT * FROM booking_verification_tokens').all();
+  assert.deepEqual(issued, [{ booking_id: original.id, token_hash: createHash('sha256').update(tokenFrom(mails[1])).digest('hex') }]);
+  const admin = await request('/api/admin/bookings');
+  for (const secret of [resendToken, original.resend_token_hash, issued[0].token_hash, tokenFrom(mails[1])]) {
+    assert.ok(!admin.text.includes(secret));
+    assert.ok(!response.text.includes(secret));
+  }
+});
+
+test('malformed, unknown and verification credentials cannot resend', async () => {
+  const created = await create();
+  const original = row();
+  for (const resendToken of [undefined, null, {}, [], 123, '', 'ab', 'g'.repeat(64), 'A'.repeat(64), 'a'.repeat(64), tokenFrom(), original.resend_token_hash, ` ${created.body.resendToken}`]) {
+    const response = await resend(resendToken);
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, /ungültig/);
+    assert.equal(response.headers['cache-control'], 'no-store');
+  }
+  assert.deepEqual(row(), original);
+  assert.equal(mails.length, 1);
+});
+
+test('only three additional attempts are allowed; all four links confirm idempotently with one final mail pair', async () => {
+  const start = Date.now();
+  const { body: { resendToken, expiresAt } } = await create();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    Date.now.mock.mockImplementation(() => start + attempt * 20000);
+    assert.equal((await resend(resendToken)).status, 200);
+    assert.equal(row().resend_count, attempt);
+  }
+  for (const elapsed of [60000, 80000]) {
+    Date.now.mock.mockImplementation(() => start + elapsed);
+    const response = await resend(resendToken);
+    assert.equal(response.status, 403);
+    assert.match(response.body.error, /höchstens dreimal/);
+  }
+  assert.equal(mails.length, 4);
+  assert.equal(row().verification_expires_at, expiresAt);
+  const tokens = mails.map((mail) => tokenFrom(mail));
+  assert.equal(new Set(tokens).size, 4);
+  const responses = await Promise.all([tokens[3], ...tokens].map(confirm));
+  assert.ok(responses.every((response) => response.status === 200));
+  assert.equal(row().status, 'confirmed');
+  assert.equal(seats(), 2);
+  assert.equal(mails.length, 6);
+  assert.equal(mails.filter((mail) => mail.to === testEnv.NOTIFY_EMAIL).length, 1);
+  Date.now.mock.mockImplementation(() => expiresAt);
+  for (const token of tokens) assert.equal((await confirm(token)).status, 200);
+  assert.equal(mails.length, 6);
+});
+
+test('concurrent resends consume one persisted attempt before awaiting mail', async () => {
+  const { body: { resendToken } } = await create();
+  const availableAt = row().resend_available_at;
+  Date.now.mock.mockImplementation(() => availableAt);
+  let release;
+  let entered;
+  const sending = new Promise((resolve) => { entered = resolve; });
+  mailResult = () => {
+    entered();
+    return new Promise((resolve) => { release = resolve; });
+  };
+  const first = resend(resendToken);
+  await sending;
+  try {
+    assert.equal(row().resend_count, 1);
+    assert.equal(row().resend_available_at, availableAt + 20000);
+    assert.equal(db.prepare('SELECT COUNT(*) AS count FROM booking_verification_tokens').get().count, 1);
+    const others = await Promise.all(Array.from({ length: 5 }, () => resend(resendToken)));
+    assert.ok(others.every((response) => response.status === 429 && response.body.retryAfter === 20));
+    assert.equal(mails.length, 2);
+    assert.equal(seats(), 2);
+  } finally {
+    release({ data: { id: 'accepted' }, error: null });
+  }
+  assert.equal((await first).status, 200);
+});
+
+for (const state of ['expired', 'cancelled', 'confirmed', 'tour cancelled']) {
+  test(`resend rejects ${state} without consuming an attempt or sending mail`, async () => {
+    const { body: { resendToken, expiresAt } } = await create();
+    const availableAt = row().resend_available_at;
+    Date.now.mock.mockImplementation(() => availableAt);
+    assert.equal((await resend(resendToken)).status, 200);
+    const tokens = mails.map((mail) => tokenFrom(mail));
+    if (state === 'expired') Date.now.mock.mockImplementation(() => expiresAt);
+    if (state === 'cancelled') await patch(`bookings/${row().id}`, { status: 'cancelled' });
+    if (state === 'confirmed') await confirm(tokens[0]);
+    if (state === 'tour cancelled') await patch('tours/1', { isCancelled: true });
+    const sent = mails.length;
+    assert.equal((await resend(resendToken)).status, state === 'expired' ? 410 : 409);
+    assert.equal(row().resend_count, 1);
+    for (const token of tokens) {
+      assert.equal((await confirm(token)).status, state === 'confirmed' ? 200 : state === 'expired' ? 410 : 409);
+    }
+    assert.equal(mails.length, sent);
+    assert.equal(seats(), ['expired', 'cancelled'].includes(state) ? 0 : 2);
+  });
+}
+
+for (const failure of ['missing key', 'provider error', 'SDK exception']) {
+  test(`resend ${failure} retains seats, expiry and old links while counting failed attempts`, async () => {
+    const start = Date.now();
+    const { body: { resendToken, expiresAt } } = await create();
+    const originalToken = tokenFrom();
+    if (failure === 'missing key') delete process.env.RESEND_API_KEY;
+    if (failure === 'provider error') mailResult = async () => ({ error: { message: 'rejected' }, data: null });
+    if (failure === 'SDK exception') mailResult = async () => { throw new Error('SDK failed'); };
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      Date.now.mock.mockImplementation(() => start + attempt * 20000);
+      const response = await resend(resendToken);
+      assert.equal(response.status, 503);
+      assert.equal(response.body.retryAfter, 20);
+      assert.equal(response.headers['retry-after'], '20');
+      assert.match(response.body.error, /ursprünglichen Ablauf/);
+      assert.equal(row().status, 'pending');
+      assert.equal(row().resend_count, attempt);
+      assert.equal(row().resend_available_at, start + (attempt + 1) * 20000);
+      assert.equal(row().verification_expires_at, expiresAt);
+      assert.equal(seats(), 2);
+      assert.equal((await resend(resendToken)).status, attempt === 3 ? 403 : 429);
+    }
+    process.env.RESEND_API_KEY = testEnv.RESEND_API_KEY;
+    mailResult = async () => ({ data: { id: 'accepted' }, error: null });
+    const issuedTokens = mails.slice(1).map((mail) => tokenFrom(mail));
+    assert.equal((await confirm(originalToken)).status, 200);
+    for (const token of issuedTokens) assert.equal((await confirm(token)).status, 200);
+    assert.equal(seats(), 2);
+    assert.equal(row().verification_expires_at, expiresAt);
+    assert.equal(mails.filter((mail) => mail.to === testEnv.NOTIFY_EMAIL).length, 1);
+  });
+}
+
+test('supplemental resend IP limiter returns retry metadata without consuming booking attempts', async () => {
+  const { body: { resendToken } } = await create();
+  const options = { ip: '198.51.100.123' };
+  for (let attempt = 0; attempt < 10; attempt++) assert.equal((await resend('invalid', options)).status, 400);
+  const response = await resend(resendToken, options);
+  assert.equal(response.status, 429);
+  assert.ok(response.body.retryAfter > 0 && response.body.retryAfter <= 900);
+  assert.equal(response.headers['retry-after'], String(response.body.retryAfter));
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(row().resend_count, 0);
+  assert.equal(mails.length, 1);
+});
+
+test('missing, blank, non-string and overlong phones never create bookings, hold seats or send mail', async () => {
+  for (const phone of [undefined, null, '', ' \t\n ', 791234567, false, {}, [], ['0791234567'], '1'.repeat(51)]) {
+    const response = await create({ phone });
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, /Telefonnummer/);
+    assert.equal(row(), undefined);
+    assert.equal(seats(), 0);
+    assert.equal(mails.length, 0);
+  }
+});
+
+for (const phone of ['079 123 45 67', '+44 (20) 7946-0958', '1'.repeat(50)]) {
+  test(`phone ${phone} is trimmed, stored and available to admins and notification mail`, async () => {
+    assert.equal((await create({ phone: `  ${phone}  ` })).status, 201);
+    assert.equal(row().phone, phone);
+    const admin = await request('/api/admin/bookings');
+    assert.equal(admin.body[0].phone, phone);
+    assert.equal((await confirm(tokenFrom())).status, 200);
+    const notification = mails.find((mail) => mail.to === testEnv.NOTIFY_EMAIL);
+    assert.ok(notification.html.includes(phone));
+  });
+}
+
+test('legacy reservations without phone remain confirmable, visible and cancellable', async () => {
+  await create();
+  db.prepare('UPDATE bookings SET phone = NULL').run();
+  assert.equal((await confirm(tokenFrom())).status, 200);
+  const admin = await request('/api/admin/bookings');
+  assert.equal(admin.body[0].phone, null);
+  assert.equal((await patch(`bookings/${row().id}`, { status: 'cancelled' })).status, 200);
+  assert.equal(row().phone, null);
+  assert.equal(seats(), 0);
 });
 
 test('only explicit POST confirms; concurrent retries send each final mail once', async () => {

@@ -32,7 +32,7 @@ function Hero({ children }) {
             <h2 id="intro-title">Osterweg</h2>
             <p>{eventInfo.intro}</p>
             <p>Mit-leben, mit-fühlen und mit-gehen: Entdecke die Hoffnung der Ostergeschichte und erlebe Ostern mit allen Sinnen.</p>
-            <p>Nach dem Rundgang: Zeit für ein Getränk und ein Gespräch im {kafi.name}. Bitte beachte die Öffnungszeiten.</p>
+            <p>Nach dem Rundgang: Zeit für ein Getränk und ein Gespräch im «Kafi i de Chile». Bitte beachte die Öffnungszeiten.</p>
           </div>
           <div className="event-intro__art" aria-hidden="true" />
         </section>
