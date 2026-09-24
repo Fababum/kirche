@@ -69,9 +69,9 @@ export const travelInfo = {
 export const secretariat = {
   heading: "Kontakt",
   text: "Melde dich bei unserem Sekretariat.",
-  name: "Susanne Egloff",
+  name: "Sekretariat Rheinau",
   phone: "052 319 12 73",
-  email: "susanne.egloff@kirche-wm.ch",
+  email: "sekretariat@kirche-wm.ch",
   address: {
     org: "Evangelisch-reformierte Kirchgemeinde Weinland Mitte",
     line1: "Sekretariat Rheinau",
