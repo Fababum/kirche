@@ -23,6 +23,7 @@ const { expirePendingBookings, VERIFICATION_TTL_MS } = await import('./bookings.
 const { default: publicRoutes } = await import('./routes/public.js');
 const { default: adminRoutes } = await import('./routes/admin.js');
 const { COOKIE_NAME } = await import('./auth.js');
+const { resetTours } = await import('./db/seedLogic.js');
 
 let server;
 let mails;
@@ -379,6 +380,26 @@ test('legacy reservations without phone remain confirmable, visible and cancella
   assert.equal(seats(), 0);
 });
 
+test('default secretariat receives booking details exactly once, only after confirmation', async () => {
+  delete process.env.NOTIFY_EMAIL;
+  await create();
+  assert.equal(mails.length, 1);
+  assert.equal(mails[0].to, bookingBody.email);
+  const token = tokenFrom();
+  const responses = await Promise.all([confirm(token), confirm(token)]);
+  assert.ok(responses.every((response) => response.status === 200));
+  const notifications = mails.filter((mail) => mail.to === 'sekretariat@kirche-wm.ch');
+  assert.equal(notifications.length, 1);
+  for (const content of [notifications[0].html, notifications[0].text]) {
+    for (const value of [bookingBody.name, bookingBody.email, bookingBody.phone,
+      '17.03.2027', '14:00', 'Personen', '2', 'verbindlich bestätigt']) {
+      assert.ok(content.includes(value), value);
+    }
+  }
+  assert.equal((await confirm(token)).status, 200);
+  assert.equal(mails.length, 3);
+});
+
 test('only explicit POST confirms; concurrent retries send each final mail once', async () => {
   await create();
   const token = tokenFrom();
@@ -396,14 +417,35 @@ test('only explicit POST confirms; concurrent retries send each final mail once'
   assert.equal(mails.length, 3);
   assert.equal(mails.filter((mail) => mail.to === testEnv.NOTIFY_EMAIL).length, 1);
   for (const mail of mails) {
-    assert.match(mail.html, /Susanne Egloff/);
-    assert.match(mail.html, /susanne\.egloff@kirche-wm\.ch/);
+    assert.match(mail.html, /Sekretariat Rheinau/);
+    assert.match(mail.html, /sekretariat@kirche-wm\.ch/);
     assert.match(mail.html, /tel:0523191273/);
   }
   db.prepare('UPDATE bookings SET verification_expires_at = 0').run();
   assert.equal((await confirm(token)).status, 200);
   assert.equal(mails.length, 3);
   assert.equal(seats(), 2);
+});
+
+test('new schedule shows school day as full and only the approved public slots are bookable', async () => {
+  resetTours();
+  const response = await request('/api/tours');
+  assert.equal(response.status, 200);
+  assert.equal(response.body.length, 36);
+  const schoolTours = response.body.filter((tour) => tour.date === '2027-03-17');
+  assert.equal(schoolTours.length, 4);
+  for (const tour of schoolTours) {
+    assert.equal(tour.isFull, true);
+    assert.equal(tour.freeSpots, 0);
+    assert.equal((await create({ tourId: tour.id, groupSize: 1 })).status, 409);
+  }
+  assert.equal(mails.length, 0);
+  assert.equal(row(), undefined);
+  const publicTours = response.body.filter((tour) => tour.date !== '2027-03-17');
+  assert.equal(publicTours.length, 32);
+  assert.ok(publicTours.every((tour) => tour.freeSpots === 15 && !tour.isFull));
+  assert.deepEqual([...new Set(publicTours.map((tour) => tour.time))], ['14:00', '15:00', '16:00', '17:00']);
+  assert.equal((await create({ tourId: publicTours[0].id })).status, 201);
 });
 
 test('malformed and unknown confirmation tokens return 400', async () => {

@@ -53,8 +53,8 @@ test('verification requires configuration and uses a fragment token and contact 
   assert.ok(mail.html.includes(`href="https://site.example.test/reservation/bestaetigen#token=${token}"`));
   assert.match(mail.html, /&lt;Visitor&gt;/);
   assert.match(mail.html, /30 Minuten/);
-  assert.match(mail.html, /Susanne Egloff/);
-  assert.match(mail.html, /mailto:susanne\.egloff@kirche-wm\.ch/);
+  assert.match(mail.html, /Sekretariat Rheinau/);
+  assert.match(mail.html, /mailto:sekretariat@kirche-wm\.ch/);
   assert.match(mail.html, /tel:0523191273/);
 });
 
@@ -103,12 +103,18 @@ test('verification preserves numeric provider status without exposing diagnostic
   assert.equal(console.error.mock.callCount(), 0);
 });
 
-test('missing notification recipient only skips the church message', async () => {
+test('missing or blank notification recipient defaults to the secretariat', async () => {
   process.env.RESEND_API_KEY = 're_test_only';
-  for (const send of senders) await send(booking, tour);
-  assert.equal(requests.length, 1);
-  assert.equal(requests[0].mail.to, booking.email);
-  assert.match(console.warn.mock.calls[0].arguments[0], /NOTIFY_EMAIL/);
+  for (const recipient of [undefined, '', '  ']) {
+    if (recipient === undefined) delete process.env.NOTIFY_EMAIL;
+    else process.env.NOTIFY_EMAIL = recipient;
+    await sendChurchNotification(booking, tour);
+    assert.equal(requests.at(-1).mail.to, 'sekretariat@kirche-wm.ch');
+  }
+  await sendVisitorConfirmation(booking, tour);
+  assert.equal(requests.length, 4);
+  assert.equal(requests.at(-1).mail.to, booking.email);
+  assert.equal(console.warn.mock.callCount(), 0);
 });
 
 test('reads runtime configuration and defaults to the canonical sender and links', async () => {
@@ -129,9 +135,9 @@ test('reads runtime configuration and defaults to the canonical sender and links
   assert.match(requests[0].mail.html, /href="https:\/\/osterweg-wyland\.com\/admin"/);
   assert.match(requests[1].mail.html, /href="https:\/\/osterweg-wyland\.com\/"/);
   assert.match(requests[1].mail.html, /Bitte antworte nicht/);
-  assert.match(requests[1].mail.html, /Susanne Egloff/);
+  assert.match(requests[1].mail.html, /Sekretariat Rheinau/);
   assert.match(requests[1].mail.html, /Schulklassen/);
-  assert.match(requests[1].mail.html, /href="mailto:susanne\.egloff@kirche-wm\.ch"/);
+  assert.match(requests[1].mail.html, /href="mailto:sekretariat@kirche-wm\.ch"/);
   assert.match(requests[1].mail.html, /href="tel:0523191273"/);
   assert.doesNotMatch(requests[1].mail.html, /per Antwort auf diese E-Mail/);
   assert.equal(console.error.mock.callCount(), 0);
@@ -195,7 +201,7 @@ test('all three messages share accessible email-safe HTML and equivalent plain t
   for (const [index, { mail }] of requests.entries()) {
     for (const content of [mail.html, mail.text]) {
       for (const value of ['17.03.2027', '14:00 Uhr', 'Personen', '4', 'Reformierte Kirche, Hauptstrasse, 8467 Truttikon',
-        'Susanne Egloff', 'susanne.egloff@kirche-wm.ch', '052 319 12 73', 'Fragen', 'Änderungen', 'Schulklassen',
+        'sekretariat@kirche-wm.ch', '052 319 12 73', 'Fragen', 'Änderungen', 'Schulklassen',
         'Evangelisch-reformierte Kirchgemeinde Weinland Mitte', 'Sekretariat Rheinau', 'Poststrasse 6', '8462 Rheinau',
         'Bitte antworte nicht', links[index]]) assert.ok(content.includes(value), value);
     }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { registrationInfo, secretariat } from '../data/content';
 import { api } from '../api';
-import { EVENT_START_DATE, EVENT_END_DATE } from '../../shared/event.js';
+import { EVENT_START_DATE, EVENT_END_DATE, SCHOOL_RESERVED_DATE } from '../../shared/event.js';
 import SchoolClassContact from './SchoolClassContact';
 import './Booking.css';
 
@@ -126,6 +126,7 @@ function Booking() {
   function dayStatus(iso) {
     const dayTours = toursByDate[iso] || [];
     if (dayTours.length === 0) return 'none';
+    if (iso === SCHOOL_RESERVED_DATE && dayTours.every((tour) => tour.isFull)) return 'full';
     if (dayTours.every(isClosed)) return 'closed';
     const anyFree = dayTours.some((t) => !t.isFull && !isClosed(t));
     return anyFree ? 'free' : 'full';
@@ -230,7 +231,7 @@ function Booking() {
                 {resendError && <p className="booking__error" role="alert">{resendError}</p>}
               </>
             ) : (
-              <p>Der Server hat deine Anmeldung entgegengenommen, aber den Versand einer Bestätigungs-E-Mail nicht bestätigt. Bitte melde dich bei Susanne Egloff, bevor du erneut buchst, damit keine doppelte Reservation entsteht.</p>
+              <p>Der Server hat deine Anmeldung entgegengenommen, aber den Versand einer Bestätigungs-E-Mail nicht bestätigt. Bitte melde dich beim {secretariat.name}, bevor du erneut buchst, damit keine doppelte Reservation entsteht.</p>
             )}
             <p>Falsche Adresse oder Fragen?{' '}<a href={`mailto:${secretariat.email}`}>{secretariat.name}</a> hilft dir weiter:<br />
               <a href={`tel:${secretariat.phone.replace(/\s/g, '')}`}>{secretariat.phone}</a>.
@@ -301,6 +302,9 @@ function Booking() {
         {selectedDate && (
           <div className="booking__slots">
             <h2>Uhrzeit wählen · {formatDateLabel(selectedDate)}</h2>
+            {selectedDate === SCHOOL_RESERVED_DATE && (
+              <p>Der 17. März ist vollständig für Schulklassen reserviert und öffentlich ausgebucht.</p>
+            )}
             <div className="booking__slot-list">
               {(toursByDate[selectedDate] || []).map((tour) => (
                 <button
@@ -315,7 +319,8 @@ function Booking() {
                 >
                   {tour.time} Uhr
                   <span className="booking__slot-spots">
-                    {isClosed(tour) ? 'Anmeldeschluss erreicht' : tour.isFull ? 'ausgebucht' : `${tour.freeSpots} Plätze frei`}
+                    {tour.date === SCHOOL_RESERVED_DATE && tour.isFull ? 'Für Schulklassen reserviert'
+                      : isClosed(tour) ? 'Anmeldeschluss erreicht' : tour.isFull ? 'ausgebucht' : `${tour.freeSpots} Plätze frei`}
                   </span>
                 </button>
               ))}

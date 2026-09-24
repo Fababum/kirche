@@ -2,7 +2,7 @@
 // Legt einen Admin-Benutzer an (oder aktualisiert das Passwort, falls der
 // Benutzername bereits existiert).
 // Ausführen mit:  node server/db/seedAdmin.js <benutzername> <passwort>
-// Beispiel:        node server/db/seedAdmin.js susanne "einSicheresPasswort"
+// Beispiel:        node server/db/seedAdmin.js sekretariat "einSicheresPasswort"
 // ============================================================================
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';

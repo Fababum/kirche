@@ -22,7 +22,7 @@ export function renderMail({ title, preheader, greeting, paragraphs, details, ac
   const wrap = 'overflow-wrap:anywhere;word-wrap:break-word;word-break:break-word;';
   const linkStyle = `color:#a9425f;text-decoration:underline;${wrap}`;
   const paragraphStyle = 'margin:0 0 20px;';
-  const contact = 'Bei Stronierungen oder Änderungen deiner Reservation oder Anmeldungen von Schulklassen hilft dir unser Sekretariat:';
+  const contact = 'Bei Fragen, Stornierungen oder Änderungen deiner Reservation oder Anmeldungen von Schulklassen hilft dir unser Sekretariat:';
   const replyNotice = replyTo
     ? `Du kannst dich auch per Antwort auf diese E-Mail an die hinterlegte Kontaktadresse wenden: ${replyTo}`
     : 'Bitte antworte nicht auf diese automatisch versendete E-Mail. Nutze für dein Anliegen die oben angegebenen Kontaktdaten vom Sekretariat.';

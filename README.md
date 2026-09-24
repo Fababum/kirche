@@ -47,6 +47,10 @@ Admin-Bereich: `http://localhost:5173/admin`
 
 - Regulärer Veranstaltungszeitraum: 17.-28. März 2027. Die gemeinsamen Werte
   stehen in `shared/event.js`.
+- Öffentliche Führungen: 18.-21. und 25.-28. März, jeweils um 14:00, 15:00,
+  16:00 und 17:00 Uhr, mit je 15 Plätzen. Der 17. März bleibt sichtbar, ist
+  aber für Schulklassen reserviert: vier Slots mit Kapazität 0, ohne künstliche
+  Reservationen. Der Titel bleibt "17.-28. März 2027".
 - Einzelanmeldungen sind möglich. Die Mindestzahl von fünf Personen gilt für
   die gesamte Führung; es gibt keine automatische Absage bei Unterschreitung.
   Das Sekretariat prüft die Teilnehmerzahl und kontaktiert Betroffene bei Bedarf.
@@ -60,6 +64,21 @@ Admin-Bereich: `http://localhost:5173/admin`
   Termine und Reservationen vor dem 17. März im Admin erhalten, sind aber nicht
   mehr öffentlich neu buchbar. Diese Alttermine vor der Live-Schaltung prüfen
   und betroffene Gäste gegebenenfalls persönlich kontaktieren.
+
+### Terminplan ausdrücklich zurücksetzen
+
+Nur nach ausdrücklicher Freigabe: Der folgende Wartungsbefehl löscht **alle
+Führungen, Reservationen und Bestätigungs-/Versandtokens** der angegebenen
+Datenbank und legt den aktuellen Standardplan neu an. Admin-Zugänge bleiben
+erhalten. Die Änderung erfolgt in einer Transaktion; es werden keine Absagemails
+verschickt. Der normale Serverstart führt diese Löschung niemals aus.
+
+```bash
+node server/db/resetTours.js --db /data/data.db --confirm-delete-all-tours-and-bookings
+```
+
+Der Pfad muss absolut sein und auf eine bestehende Datenbank zeigen. Für Fly
+den Befehl im App-Container ausführen, nicht gegen die lokale Datenbank.
 - Tests ohne echte Buchungen oder Mailversand: `node --test server/*.test.js`.
 
 ---
@@ -112,24 +131,25 @@ nicht verloren.
     `Osterweg Wyland <noreply@osterweg-wyland.com>` (`MAIL_FROM`).
     Die Domain-Verifizierung allein bestätigt keine Mailzustellung.
 
-    Für Fly wird `RESEND_API_KEY` als Secret benötigt. `NOTIFY_EMAIL` und die
-    optionale Antwortadresse `MAIL_REPLY_TO` erst nach Bestätigung durch die
-    Verantwortlichen setzen. Die folgenden Werte sind nur Platzhalter:
+    Für Fly wird `RESEND_API_KEY` als Secret benötigt. Benachrichtigungen über
+    verbindlich bestätigte Reservationen gehen standardmässig an
+    `sekretariat@kirche-wm.ch`. `NOTIFY_EMAIL` überschreibt diesen Empfänger.
+    Die optionale Antwortadresse `MAIL_REPLY_TO` nur nach Bestätigung setzen:
 
     ```bash
     fly secrets set RESEND_API_KEY="<RESEND_API_KEY>"
-    fly secrets set NOTIFY_EMAIL="<BESTAETIGTE_EMPFAENGERADRESSE>"
+    fly secrets set NOTIFY_EMAIL="sekretariat@kirche-wm.ch"
     # Optional, nur für eine bestätigte und betreute Antwortadresse:
     fly secrets set MAIL_REPLY_TO="<BESTAETIGTE_ANTWORTADRESSE>"
     ```
 
-    Ohne `NOTIFY_EMAIL` entfällt nur die Kirchen-Benachrichtigung. Ohne
+    Ohne oder mit leerem `NOTIFY_EMAIL` wird das Sekretariat benachrichtigt. Ohne
     `MAIL_REPLY_TO` wird kein Reply-To gesetzt; die Besucher-Bestätigung verweist
-    für Fragen, Änderungen und Schulklassen direkt auf Susanne Egloff
-    (`susanne.egloff@kirche-wm.ch`, `052 319 12 73`), statt Antworten auf
+    für Fragen, Änderungen und Schulklassen direkt auf das Sekretariat Rheinau
+    (`sekretariat@kirche-wm.ch`, `052 319 12 73`), statt Antworten auf
     die Noreply-Adresse zu empfehlen. Mit `MAIL_REPLY_TO` wird diese Adresse als
     Reply-To für alle Mails verwendet. Auch die Verifikationsmail enthält
-    Susannes Kontaktdaten.
+    die Kontaktdaten des Sekretariats Rheinau.
 
     `PUBLIC_URL` ist die einzelne öffentliche HTTP(S)-Basis-URL für Mail-Links
     (Standard: `https://osterweg-wyland.com`), unabhängig von der

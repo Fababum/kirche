@@ -95,16 +95,12 @@ export async function sendChurchNotification(booking, tour) {
     console.warn('[mailer] RESEND_API_KEY nicht gesetzt - überspringe Benachrichtigung an Kirche.');
     return;
   }
-  if (!NOTIFY_EMAIL) {
-    console.warn('[mailer] NOTIFY_EMAIL nicht gesetzt - überspringe Benachrichtigung an Kirche.');
-    return;
-  }
 
   try {
     const resend = new Resend(RESEND_API_KEY);
     const { error } = await resend.emails.send({
       from: MAIL_FROM || DEFAULT_MAIL_FROM,
-      to: NOTIFY_EMAIL,
+      to: NOTIFY_EMAIL?.trim() || 'sekretariat@kirche-wm.ch',
       ...(MAIL_REPLY_TO ? { replyTo: MAIL_REPLY_TO } : {}),
       subject: `Neue Reservation: ${booking.name} (${formatDate(tour.date)})`,
       ...renderMail({

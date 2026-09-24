@@ -20,6 +20,22 @@ function TeamContacts() {
               {eventInfo.location.street}<br />
               {eventInfo.location.zipCity}
             </p>
+            <details className="team-contacts__more">
+              <summary>Weitere Ansprechpersonen</summary>
+              <div className="team-contacts__list">
+                {teamContacts.map((person) => (
+                  <div key={person.name} className="team-contacts__row">
+                    <span className="team-contacts__name">{person.name}</span>
+                    <a href={`mailto:${person.email}`}>{person.email}</a>
+                    {HAS_DIGIT.test(person.phone) ? (
+                      <a href={`tel:${person.phone.replace(/\s/g, '')}`}>{person.phone}</a>
+                    ) : (
+                      <span className="team-contacts__pending">{person.phone}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
           </section>
 
           <section>
@@ -52,22 +68,6 @@ function TeamContacts() {
           </a>
         </div>
 
-        <details className="team-contacts__more">
-          <summary>Weitere Ansprechpersonen</summary>
-          <div className="team-contacts__list">
-            {teamContacts.map((person) => (
-              <div key={person.name} className="team-contacts__row">
-                <span className="team-contacts__name">{person.name}</span>
-                <a href={`mailto:${person.email}`}>{person.email}</a>
-                {HAS_DIGIT.test(person.phone) ? (
-                  <a href={`tel:${person.phone.replace(/\s/g, '')}`}>{person.phone}</a>
-                ) : (
-                  <span className="team-contacts__pending">{person.phone}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </details>
       </div>
     </section>
   );

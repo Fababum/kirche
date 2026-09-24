@@ -216,7 +216,7 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
     return res.status(503).json({
       error: `${reason === 'MAIL_NOT_CONFIGURED'
         ? 'Unser E-Mail-Versand ist noch nicht eingerichtet.'
-        : 'Unser E-Mail-Dienst konnte die Bestätigungs-E-Mail derzeit nicht versenden.'} Deine Reservation wurde deshalb nicht abgeschlossen; es werden keine Plätze für diese Anmeldung freigehalten. Bitte kontaktiere Susanne Egloff: susanne.egloff@kirche-wm.ch, 052 319 12 73.`,
+        : 'Unser E-Mail-Dienst konnte die Bestätigungs-E-Mail derzeit nicht versenden.'} Deine Reservation wurde deshalb nicht abgeschlossen; es werden keine Plätze für diese Anmeldung freigehalten. Bitte kontaktiere das Sekretariat Rheinau: sekretariat@kirche-wm.ch, 052 319 12 73.`,
     });
   }
 

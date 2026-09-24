@@ -49,9 +49,9 @@ export const tourInfo = {
   heading: "Führungszeiten",
   description: "Dauer: ca. 45 Minuten.",
   schedule: [
-    { days: "Di - Do", time: "10-11 + 14-19 Uhr" },
-    { days: "Fr + Sa", time: "10-11 + 14-21 Uhr" },
-    { days: "So", time: "12-19 Uhr" },
+    { days: "17. März", time: "Für Schulklassen reserviert / ausgebucht" },
+    { days: "18.-21. März", time: "14:00, 15:00, 16:00 und 17:00 Uhr" },
+    { days: "25.-28. März", time: "14:00, 15:00, 16:00 und 17:00 Uhr" },
   ],
 };
 
@@ -88,16 +88,16 @@ export const volunteerAreas = [
     period: "ab sofort",
     description: "Nähen, Basteln, Malen - hilf mit beim Vorbereiten.",
     contact: {
-      name: "Anita und Beat",
-      phone: "078 778 12 88",
+      name: "Anita Spengler",
+      phone: "Telefonnummer folgt",
       email: "anita@kirche-wm.ch",
     },
   },
   {
     key: "guide",
     title: "Guide",
-    period: "Schulung ab Januar 2027",
-    description: "Führe Besucher durch den Osterweg. Schulung inklusive.",
+    period: "Schulungen ab Januar 2027",
+    description: "Führe Besucher durch den Osterweg. Schulungen inklusive.",
     contact: {
       name: "Thomas Guler",
       phone: "079 605 23 50",
@@ -118,10 +118,10 @@ export const volunteerAreas = [
   {
     key: "kafi-team",
     title: '«Kafi»-Team',
-    period: "12.-17. März 2027",
+    period: "17.-28. März 2027",
     description: "Empfange Gäste im Kafi mit Getränk und Gespräch.",
     contact: {
-      name: "Violett",
+      name: "Susan Renggli",
       phone: "Telefonnummer folgt",
       email: "", // Vollständige E-Mail-Adresse noch nicht bekannt
     },
@@ -129,7 +129,7 @@ export const volunteerAreas = [
   {
     key: "gastgeber",
     title: "Gastgeber / Host",
-    period: "12.-17. März 2027",
+    period: "17.-28. März 2027",
     description: "Richte die Räume nach jeder Führung wieder her.",
     contact: {
       name: "Thomas Guler",
@@ -140,7 +140,7 @@ export const volunteerAreas = [
   {
     key: "abbau",
     title: "Abbau",
-    period: "12.-17. März 2027",
+    period: "19. März 2027",
     description: "Hilf mit beim Zurückbauen und Einlagern.",
     contact: {
       name: "Beat Graf",
@@ -203,7 +203,7 @@ export const footerInfo = {
   street: "Poststrasse 6",
   zipCity: "8462 Rheinau",
   phone: "052 319 12 73",
-  email: "susanne.egloff@kirche-wm.ch",
+  email: secretariat.email,
   projectBy: "Evangelisch-reformierte Kirchgemeinde Weinland Mitte",
   copyright: `© ${new Date().getFullYear()} Fabian Spiri`,
 };

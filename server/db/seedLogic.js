@@ -4,41 +4,17 @@
 // (index.js) verwendet, damit ein frischer Container sofort einsatzbereit ist.
 // ============================================================================
 import { db } from './database.js';
-import { EVENT_START_DATE, EVENT_END_DATE } from '../../shared/event.js';
-
-// Reguläre Wochenzeiten laut Content-Vorgabe (Truttikon):
-// Di - Do: 10-11 + 14-19 Uhr
-// Fr + Sa: 10-11 + 14-21 Uhr
-// So:      12-19 Uhr
-// Mo:      kein Betrieb (nicht erwähnt in den Öffnungszeiten)
-function hourlySlots(startHour, endHour) {
-  const slots = [];
-  for (let h = startHour; h < endHour; h++) {
-    slots.push(`${String(h).padStart(2, '0')}:00`);
-  }
-  return slots;
-}
-
-function slotsForWeekday(weekday) {
-  // weekday: 0 = Sonntag ... 6 = Samstag
-  switch (weekday) {
-    case 1: // Montag - kein Betrieb
-      return [];
-    case 2: // Dienstag
-    case 3: // Mittwoch
-    case 4: // Donnerstag
-      return [...hourlySlots(10, 11), ...hourlySlots(14, 19)];
-    case 5: // Freitag
-    case 6: // Samstag
-      return [...hourlySlots(10, 11), ...hourlySlots(14, 21)];
-    case 0: // Sonntag
-      return hourlySlots(12, 19);
-    default:
-      return [];
-  }
-}
+import {
+  EVENT_START_DATE, EVENT_END_DATE, SCHOOL_RESERVED_DATE,
+  PUBLIC_TOUR_DATES, TOUR_START_TIMES,
+} from '../../shared/event.js';
 
 const DEFAULT_CAPACITY = 15;
+const INITIALIZATION_KEY = 'default-tours-v1';
+const INITIALIZATION_SCHEMA = `CREATE TABLE IF NOT EXISTS initialization_flags (
+  key TEXT PRIMARY KEY,
+  initialized_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`;
 
 export function seedTours({
   startDate = EVENT_START_DATE,
@@ -52,24 +28,17 @@ export function seedTours({
     `SELECT id FROM tours WHERE date = ? AND time = ?`
   );
 
-  const current = new Date(startDate + 'T00:00:00Z');
-  const end = new Date(endDate + 'T00:00:00Z');
   let created = 0;
 
-  while (current <= end) {
-    const iso = current.toISOString().slice(0, 10);
-    const weekday = current.getUTCDay();
-    const times = slotsForWeekday(weekday);
-
-    for (const time of times) {
-      const existing = existsStmt.get(iso, time);
+  for (const date of [SCHOOL_RESERVED_DATE, ...PUBLIC_TOUR_DATES]) {
+    if (date < startDate || date > endDate) continue;
+    for (const time of TOUR_START_TIMES) {
+      const existing = existsStmt.get(date, time);
       if (!existing) {
-        insertStmt.run(iso, time, capacity);
+        insertStmt.run(date, time, date === SCHOOL_RESERVED_DATE ? 0 : capacity);
         created++;
       }
     }
-
-    current.setUTCDate(current.getUTCDate() + 1);
   }
 
   return created;
@@ -79,15 +48,22 @@ export function seedTours({
 // refill slots: missing tours may have been deliberately deleted by an admin.
 export function initializeTours() {
   return db.transaction(() => {
-    db.exec(`CREATE TABLE IF NOT EXISTS initialization_flags (
-      key TEXT PRIMARY KEY,
-      initialized_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )`);
-    const key = 'default-tours-v1';
-    if (db.prepare('SELECT 1 FROM initialization_flags WHERE key = ?').get(key)) return 0;
+    db.exec(INITIALIZATION_SCHEMA);
+    if (db.prepare('SELECT 1 FROM initialization_flags WHERE key = ?').get(INITIALIZATION_KEY)) return 0;
     const hasTours = db.prepare('SELECT 1 FROM tours LIMIT 1').get();
     const created = hasTours ? 0 : seedTours();
-    db.prepare('INSERT INTO initialization_flags (key) VALUES (?)').run(key);
+    db.prepare('INSERT INTO initialization_flags (key) VALUES (?)').run(INITIALIZATION_KEY);
+    return created;
+  }).immediate();
+}
+
+// Explicit maintenance only. DELETE preserves AUTOINCREMENT high-water marks.
+export function resetTours() {
+  return db.transaction(() => {
+    db.exec('DELETE FROM booking_verification_tokens; DELETE FROM bookings; DELETE FROM tours;');
+    const created = seedTours();
+    db.exec(INITIALIZATION_SCHEMA);
+    db.prepare('INSERT OR IGNORE INTO initialization_flags (key) VALUES (?)').run(INITIALIZATION_KEY);
     return created;
   }).immediate();
 }
