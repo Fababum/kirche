@@ -90,7 +90,6 @@ export const volunteerAreas = [
     contact: {
       name: "Anita Spengler",
       phone: "Telefonnummer folgt",
-      email: "anita@kirche-wm.ch",
     },
   },
   {

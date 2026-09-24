@@ -29,8 +29,8 @@ function Footer() {
           <a className="site-footer__church" href="https://www.kirche-wm.ch/"
             target="_blank" rel="noopener noreferrer"
             aria-label="Offizielle Website der reformierten Kirche Weinland Mitte (neuer Tab)">
-            <img src="/images/logo.png" alt="Reformierte Kirche Weinland Mitte"
-              width="595" height="207" loading="lazy" />
+            <img src="/images/weinland-mitte-logo.svg" alt="Reformierte Kirche Weinland Mitte"
+              width="709" height="140" loading="lazy" />
           </a>
         </div>
       </div>

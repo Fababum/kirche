@@ -1,4 +1,4 @@
-import { eventInfo, kafi } from '../data/content';
+import { eventInfo } from '../data/content';
 import './Hero.css';
 
 function Hero({ children }) {
@@ -7,13 +7,22 @@ function Hero({ children }) {
       <section className="hero" aria-labelledby="hero-title">
         <img className="hero__art" src="/Hintergrund.jpg"
           alt="" width="2000" height="1332" fetchPriority="high" />
+        <a className="hero__logo" href="https://www.kirche-wm.ch/" target="_blank" rel="noreferrer">
+          <img src="/images/weinland-mitte-logo.svg"
+            alt="Reformierte Kirche Weinland Mitte" width="709" height="140" />
+        </a>
         <div className="hero__title">
-          <h1 id="hero-title">Osterweg <span>Wyland</span></h1>
+          <div className="hero__headline">
+            <h1 id="hero-title">Osterweg Wyland</h1>
+            <span className="hero__date-splash">17.-28. März 2027</span>
+          </div>
           <p>{eventInfo.claim}</p>
         </div>
         <a className="hero__discover" href="#entdecken">
           Den Osterweg entdecken
-          <span aria-hidden="true" />
+          <svg viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true">
+            <path d="m1 1 5 5 5-5" />
+          </svg>
         </a>
       </section>
       <div className="home-page__content">
