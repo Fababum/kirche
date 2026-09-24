@@ -193,21 +193,12 @@
   transform: translateY(-50%);
 }
 
-.home-page .hero__headline {
-  position: relative;
-  display: inline-block;
-}
-
 .home-page .hero__date-splash {
-  position: absolute;
-  right: 0;
-  top: calc(-1 * clamp(16px, 2vw, 38px));
+  margin-top: clamp(12px, 1.2vw, 16px);
   color: #f5e9d5;
-  font: 700 clamp(15.9201px, 4.06847vw, 53.067px)/1.5 var(--font);
+  font: 700 clamp(24px, 5vw, 70px)/1.5 var(--font);
   letter-spacing: 0.025em;
   white-space: nowrap;
-  transform: translate(50%, -50%) rotate(14deg);
-  transform-origin: center;
 }
 
 .home-page .hero h1 {

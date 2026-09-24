@@ -12,10 +12,8 @@ function Hero({ children }) {
             alt="Reformierte Kirche Weinland Mitte" width="709" height="140" />
         </a>
         <div className="hero__title">
-          <div className="hero__headline">
-            <h1 id="hero-title">Osterweg Wyland</h1>
-            <span className="hero__date-splash">17.-28. März 2027</span>
-          </div>
+          <h1 id="hero-title">{eventInfo.title}</h1>
+          <div className="hero__date-splash">{eventInfo.dateRange}</div>
           <p>{eventInfo.claim}</p>
         </div>
         <a className="hero__discover" href="#entdecken">
