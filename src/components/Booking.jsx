@@ -253,7 +253,7 @@ function Booking() {
 
         <div className="booking__rules">
           <p>{registrationInfo.notice}</p>
-          <p><strong>{registrationInfo.deadline}</strong> Alle Uhrzeiten sind Schweizer Zeit.</p>
+          <p><strong>{registrationInfo.deadline}</strong></p>
           <p>Nach der Anmeldung hast du 30 Minuten Zeit, deine E-Mail-Adresse zu bestätigen. So lange halten wir deine Plätze frei.</p>
         </div>
 
