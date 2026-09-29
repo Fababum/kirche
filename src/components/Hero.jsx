@@ -5,8 +5,8 @@ function Hero({ children }) {
   return (
     <>
       <section className="hero" aria-labelledby="hero-title">
-        <img className="hero__art" src="/Hintergrund.jpg"
-          alt="" width="2000" height="1332" fetchPriority="high" />
+        <img className="hero__art" src="/images/hero-background.webp"
+          alt="" width="2400" height="1598" fetchPriority="high" />
         <a className="hero__logo" href="https://www.kirche-wm.ch/" target="_blank" rel="noreferrer">
           <img src="/images/weinland-mitte-logo.svg"
             alt="Reformierte Kirche Weinland Mitte" width="709" height="140" />
@@ -38,7 +38,7 @@ function Hero({ children }) {
           <div className="event-intro__copy">
             <h2 id="intro-title">Osterweg</h2>
             <p>{eventInfo.intro}</p>
-            <p>Mit-leben, mit-fühlen und mit-gehen: Entdecke die Hoffnung der Ostergeschichte und erlebe Ostern mit allen Sinnen.</p>
+            <p>Mit-erleben, mit-fühlen und mit-gehen: Entdecke die Hoffnung der Ostergeschichte und erlebe Ostern mit allen Sinnen.</p>
             <p>Nach dem Rundgang: Zeit für ein Getränk und ein Gespräch im «Kafi i de Chile». Bitte beachte die Öffnungszeiten.</p>
           </div>
           <div className="event-intro__art" aria-hidden="true" />

@@ -334,7 +334,7 @@
 
 .home-page .volunteer {
   background: linear-gradient(rgb(253 237 207 / 78%), rgb(253 237 207 / 78%)),
-    url('/Hintergrund.jpg') right center / cover;
+    url('/images/hero-background.webp') right center / cover;
 }
 
 .home-page .volunteer__grid {
