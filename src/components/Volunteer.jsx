@@ -16,19 +16,24 @@ function Volunteer() {
           {volunteerAreas.map((area) => (
             <div key={area.key} className="card volunteer__card">
               <h3>{area.title}</h3>
-              <span className="badge">{area.period}</span>
+              {area.period && <span className="badge">{area.period}</span>}
               <p>{area.description}</p>
               <div className="volunteer__contact">
                 <span>Kontakt</span>
-                <strong>{area.contact.name}</strong>
-                {HAS_DIGIT.test(area.contact.phone) ? (
-                  <a href={`tel:${area.contact.phone.replace(/\s/g, '')}`}>
-                    {area.contact.phone}
-                  </a>
-                ) : (
-                  <span className="volunteer__contact-pending">{area.contact.phone}</span>
+                {area.contacts.length === 0 && (
+                  <span className="volunteer__contact-pending">Kontakt folgt</span>
                 )}
-                {area.contact.email && <a href={`mailto:${area.contact.email}`}>{area.contact.email}</a>}
+                {area.contacts.map((contact) => (
+                  <div key={contact.name} className="volunteer__contact-person">
+                    <strong>{contact.name}</strong>
+                    {!contact.phone ? null : HAS_DIGIT.test(contact.phone) ? (
+                      <a href={`tel:${contact.phone.replace(/\s/g, '')}`}>{contact.phone}</a>
+                    ) : (
+                      <span className="volunteer__contact-pending">{contact.phone}</span>
+                    )}
+                    {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+                  </div>
+                ))}
               </div>
             </div>
           ))}

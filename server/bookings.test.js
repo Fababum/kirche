@@ -431,7 +431,7 @@ test('new schedule shows school day as full and only the approved public slots a
   resetTours();
   const response = await request('/api/tours');
   assert.equal(response.status, 200);
-  assert.equal(response.body.length, 36);
+  assert.equal(response.body.length, 44);
   const schoolTours = response.body.filter((tour) => tour.date === '2027-03-17');
   assert.equal(schoolTours.length, 4);
   for (const tour of schoolTours) {
@@ -441,10 +441,15 @@ test('new schedule shows school day as full and only the approved public slots a
   }
   assert.equal(mails.length, 0);
   assert.equal(row(), undefined);
-  const publicTours = response.body.filter((tour) => tour.date !== '2027-03-17');
-  assert.equal(publicTours.length, 32);
-  assert.ok(publicTours.every((tour) => tour.freeSpots === 15 && !tour.isFull));
-  assert.deepEqual([...new Set(publicTours.map((tour) => tour.time))], ['14:00', '15:00', '16:00', '17:00']);
+  const reserved = response.body.filter((tour) => tour.label);
+  assert.deepEqual(reserved.map((tour) => `${tour.date} ${tour.time} ${tour.isFull}`),
+    ['2027-03-20 10:00 true', '2027-03-20 11:00 true']);
+  const publicTours = response.body.filter((tour) => tour.date !== '2027-03-17' && !tour.label);
+  assert.equal(publicTours.length, 38);
+  assert.ok(publicTours.every((tour) => tour.freeSpots === 12 && !tour.isFull));
+  assert.deepEqual([...new Set(publicTours.map((tour) => tour.time))].sort(),
+    ['10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '19:00', '20:00']);
+  assert.equal((await create({ tourId: publicTours[0].id, groupSize: 13 })).status, 400);
   assert.equal((await create({ tourId: publicTours[0].id })).status, 201);
 });
 

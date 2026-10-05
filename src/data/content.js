@@ -14,7 +14,7 @@
 // korrekten Angaben feststehen.
 // ============================================================================
 
-import { BOOKING_CUTOFF_HOURS, MIN_TOUR_PARTICIPANTS } from '../../shared/event.js';
+import { BOOKING_CUTOFF_HOURS, MIN_TOUR_PARTICIPANTS, MAX_TOUR_PARTICIPANTS } from '../../shared/event.js';
 
 export const eventInfo = {
   title: "Osterweg Wyland",
@@ -25,21 +25,22 @@ export const eventInfo = {
     zipCity: "8467 Truttikon",
   },
   claim: "Ostern erleben mit allen Sinnen",
-  intro: "Ein Guide führt dich durch das Ostergeschehen. Für alle: allein, mit Familie, in der Gruppe.",
+  introHeading: "Tauche ein in eine andere Zeit!",
+  intro: "Ein Guide nimmt dich mit auf eine Zeitreise ins Ostergeschehen vor 2000 Jahren. Erlebe, fühle und gehe den Weg aktiv mit und entdecke die Hoffnung, die darin steckt.",
+  introInvite: "Komm vorbei: ob allein, mit der Familie, in der Gruppe oder mit der Schul- und Untiklasse.",
+  introKafi: "Nach dem Rundgang: Zeit für ein Getränk und Begegnung im «Kafi i de Chile». Das Kafi ist während der Führungszeiten geöffnet.",
 };
 
 export const kafi = {
   name: "S'Kafi i de Chile",
-  hours: [
-    { days: "Mi - Fr", time: "14-18 Uhr" },
-    { days: "Sa + So", time: "12-18 Uhr" },
-  ],
+  text: "Während der Führungszeiten geöffnet.",
 };
 
 export const registrationInfo = {
-  heading: "Rundgang reservieren",
+  heading: "Führungen und Anmeldung",
   subheading: "17. - 28. März 2027",
-  notice: `Einzelpersonen und Gruppen sind willkommen. Eine Führung findet ab insgesamt ${MIN_TOUR_PARTICIPANTS} Personen statt, regulär mit maximal 15 Personen. Bitte melde dich an.`,
+  notice: `Stündliche Gruppen-Führungen. Online-Anmeldung ist notwendig! Einzelpersonen und Gruppen sind willkommen. Eine Führung findet ab ${MIN_TOUR_PARTICIPANTS} Personen statt, mit maximal ${MAX_TOUR_PARTICIPANTS} Personen.`,
+  groupsHint: "Ausserhalb der Öffnungszeiten: Gruppen meldet euch beim Sekretariat.",
   accessibility: "Der Rundgang ist barrierefrei.",
   deadline: `Anmeldeschluss ist ${BOOKING_CUTOFF_HOURS} Stunden vor Beginn der Führung.`,
   mobileHint: "Tag antippen, dann Führung auswählen.",
@@ -47,22 +48,23 @@ export const registrationInfo = {
 
 export const tourInfo = {
   heading: "Führungszeiten",
-  description: "Dauer: ca. 45 Minuten.",
+  description: "Stündliche Gruppen-Führungen, Dauer ca. 45 Minuten. Online-Anmeldung ist notwendig!",
   schedule: [
-    { days: "17. März", time: "Für Schulklassen reserviert / ausgebucht" },
-    { days: "18.-21. März", time: "14:00, 15:00, 16:00 und 17:00 Uhr" },
-    { days: "25.-28. März", time: "14:00, 15:00, 16:00 und 17:00 Uhr" },
+    { days: "Mi, 17. März", time: "Für Schulklassen reserviert / ausgebucht" },
+    { days: "Do + So, 18./21. und 25./28. März", time: "14, 15, 16 und 17 Uhr" },
+    { days: "Fr, 19. und 26. März", time: "14, 15, 16, 17 sowie 19 und 20 Uhr" },
+    { days: "Sa, 20. und 27. März", time: "10, 11 sowie 14, 15, 16 und 17 Uhr" },
   ],
 };
 
 export const costsInfo = {
-  heading: "Kosten",
-  text: "Eintritt frei. Spenden willkommen.",
+  heading: "Eintritt frei",
+  text: "Kollekte zur Deckung der Unkosten.",
 };
 
 export const travelInfo = {
   heading: "Anreise & Parken",
-  text: "Parkplätze bei der Kirche begrenzt vorhanden.",
+  text: "Parkplätze vor Ort sind signalisiert (an der Langenmooserstrasse, siehe Karte).",
   publicTransport: "Postauto-Linie 621 ab Bahnhof Ossingen oder Bahnhof Marthalen, Haltestelle Truttikon.",
 };
 
@@ -83,69 +85,56 @@ export const secretariat = {
 // Bereiche, in denen man sich als Helfer/in engagieren kann.
 export const volunteerAreas = [
   {
-    key: "crea-team",
-    title: "Crea-Team",
-    period: "ab sofort",
-    description: "Nähen, Basteln, Malen - hilf mit beim Vorbereiten.",
-    contact: {
-      name: "Anita Spengler",
-      phone: "Telefonnummer folgt",
-    },
-  },
-  {
     key: "guide",
     title: "Guide",
     period: "Schulungen ab Januar 2027",
-    description: "Führe Besucher durch den Osterweg. Schulungen inklusive.",
-    contact: {
-      name: "Thomas Guler",
-      phone: "079 605 23 50",
-      email: "thomas.guler@kirche-wm.ch",
-    },
-  },
-  {
-    key: "aufbau",
-    title: "Aufbau",
-    period: "12.-17. März 2027",
-    description: "Hilf mit beim Aufbauen der Stationen.",
-    contact: {
-      name: "Beat Graf",
-      phone: "079 850 67 68",
-      email: "beat.graf@kirche-wm.ch",
-    },
+    description: "Führe Besucher durch den Osterweg. Bist du aufgeschlossen und hast Freude daran, andere mitzunehmen? Vorab wirst du geschult und erhältst ein fertiges Manuskript für deine Tour. Über ein Tablet steuerst du ganz einfach die passenden Effekte und Einspielfilme. Die Termine für die Schulung erfährst du rechtzeitig. Probelauf für Guides am 13./14. März 2027.",
+    contacts: [
+      { name: "Thomas Guler", phone: "079 605 23 50", email: "thomas.guler@kirche-wm.ch" },
+    ],
   },
   {
     key: "kafi-team",
     title: '«Kafi»-Team',
     period: "17.-28. März 2027",
-    description: "Empfange Gäste im Kafi mit Getränk und Gespräch.",
-    contact: {
-      name: "Susan Renggli",
-      phone: "Telefonnummer folgt",
-      email: "", // Vollständige E-Mail-Adresse noch nicht bekannt
-    },
+    description: "Wir begrüssen unsere eintreffenden Gäste herzlich. Im Anschluss an die packende Zeitreise laden wir sie in unser gemütliches «Kafi» ein, wo Erfrischungen und feine Snacks auf sie warten. Möchtest du mit deiner gastfreundlichen Art Teil unseres Teams werden?",
+    contacts: [
+      { name: "Susan Renggli", phone: "079 511 31 03" },
+    ],
   },
   {
     key: "gastgeber",
     title: "Gastgeber / Host",
     period: "17.-28. März 2027",
-    description: "Richte die Räume nach jeder Führung wieder her.",
-    contact: {
-      name: "Thomas Guler",
-      phone: "079 605 23 50",
-      email: "thomas.guler@kirche-wm.ch",
-    },
+    description: "Nach jeder Führung machst du einen Rundgang durch die Räumlichkeiten und richtest alles wieder für die neue Gruppe her. Diese Tätigkeit hat eine bedeutende Wirkung.",
+    contacts: [
+      { name: "Thomas Guler", phone: "079 605 23 50", email: "thomas.guler@kirche-wm.ch" },
+    ],
+  },
+  {
+    key: "aufbau",
+    title: "Aufbau + Dekoration",
+    period: "8.-12. März 2027",
+    description: "Wir suchen helfende Hände für die Montage und Aufbau der Ausstellungsmodule sowie das Verlegen von Kabeln und Installieren von Licht- und Tontechnik.",
+    contacts: [
+      { name: "Anita Spengler und Beat Graf", phone: "079 850 67 68", email: "beat.graf@kirche-wm.ch" },
+    ],
   },
   {
     key: "abbau",
     title: "Abbau",
-    period: "19. März 2027",
-    description: "Hilf mit beim Zurückbauen und Einlagern.",
-    contact: {
-      name: "Beat Graf",
-      phone: "079 850 67 68",
-      email: "beat.graf@kirche-wm.ch",
-    },
+    period: "29. März 2027 (Ostermontag)",
+    description: "Nach dem Osterweg muss alles zurückgebaut und verstaut werden. Auch hier brauchen wir ein paar Hände, die mitanpacken, zurückbringen, einpacken und einlagern. Bist du praktisch veranlagt?",
+    contacts: [
+      { name: "Anita Spengler und Beat Graf", phone: "079 850 67 68", email: "beat.graf@kirche-wm.ch" },
+    ],
+  },
+  {
+    key: "gebets-team",
+    title: "Gebets-Team",
+    period: "",
+    description: "Wir bauen ein Gebetsteam auf, das das gesamte Projekt im Gebet mitträgt, damit alles reibungslos klappt und Menschen berührt werden. Möchtest du mitbeten? Egal ob regelmässig oder flexibel: Deine Unterstützung zählt! Melde dich, wenn du dabei sein möchtest.",
+    contacts: [],
   },
 ];
 
@@ -153,7 +142,7 @@ export const downloadSection = {
   heading: "Werbematerial",
   title: "Flyer herunterladen",
   text: "Flyer, Plakat und Banner. Weitergeben und Veröffentlichen.",
-  linkHref: "/downloads/osterweg-wyland-flyer.zip",
+  linkHref: "/downloads/osterweg_wyland_flyer.zip",
   linkLabel: "Flyer herunterladen",
 };
 

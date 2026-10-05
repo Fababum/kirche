@@ -16,3 +16,14 @@
     height: 240px;
   }
 }
+
+.location-map__badge {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #1f5fa8;
+  color: #fff;
+  font: 700 18px/1 var(--font);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}

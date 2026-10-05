@@ -17,6 +17,9 @@ export function migrateVerification(db) {
     if (!columns.includes('resend_count')) {
       db.exec('ALTER TABLE bookings ADD COLUMN resend_count INTEGER NOT NULL DEFAULT 0');
     }
+    if (!db.pragma('table_info(tours)').some((column) => column.name === 'label')) {
+      db.exec('ALTER TABLE tours ADD COLUMN label TEXT');
+    }
     db.exec(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_verification_token
         ON bookings(verification_token_hash);

@@ -8,7 +8,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { db } from '../db/database.js';
 import { expirePendingBookings, VERIFICATION_TTL_MS } from '../bookings.js';
 import { sendChurchNotification, sendVisitorConfirmation, sendVisitorVerification } from '../mailer.js';
-import { EVENT_START_DATE, EVENT_END_DATE, BOOKING_CUTOFF_HOURS } from '../../shared/event.js';
+import { EVENT_START_DATE, EVENT_END_DATE, BOOKING_CUTOFF_HOURS, MAX_TOUR_PARTICIPANTS } from '../../shared/event.js';
 
 const router = Router();
 
@@ -92,6 +92,7 @@ router.get('/tours', (req, res) => {
       bookedCount: t.booked_count,
       freeSpots: Math.max(0, t.capacity - t.booked_count),
       isFull: t.booked_count >= t.capacity,
+      label: t.label || null,
       isBookingClosed: now >= closesAt,
       bookingClosesAt: new Date(closesAt).toISOString(),
     }];
@@ -142,8 +143,11 @@ router.post('/bookings', bookingRateLimiter, async (req, res) => {
   }
 
   const size = Number(groupSize);
-  if (!Number.isInteger(size) || size < 1 || size > 500) {
+  if (!Number.isInteger(size) || size < 1) {
     return res.status(400).json({ error: 'Ungültige Gruppengrösse.' });
+  }
+  if (size > MAX_TOUR_PARTICIPANTS) {
+    return res.status(400).json({ error: `Pro Führung sind maximal ${MAX_TOUR_PARTICIPANTS} Personen möglich. Grössere Gruppen melden sich bitte beim Sekretariat.` });
   }
 
   const token = randomBytes(32).toString('hex');

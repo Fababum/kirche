@@ -57,6 +57,16 @@
   font-size: 14px;
 }
 
+.volunteer__contact-person {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.volunteer__contact-person + .volunteer__contact-person {
+  margin-top: var(--space-2);
+}
+
 .volunteer__contact strong {
   color: var(--text-h);
   font-size: 15px;

@@ -7,12 +7,16 @@
 // ============================================================================
 import bcrypt from 'bcryptjs';
 import { db } from './database.js';
-import { initializeTours } from './seedLogic.js';
+import { initializeTours, migrateScheduleV2 } from './seedLogic.js';
 
 export function runStartupSetup() {
   const createdTours = initializeTours();
   if (createdTours > 0) {
     console.log(`Startup-Seed: ${createdTours} neue Führungs-Slots angelegt.`);
+  }
+  const v2 = migrateScheduleV2();
+  if (v2) {
+    console.log(`Plan-Update: ${v2.added} Führungen ergänzt, ${v2.capped} auf max. 12 Personen gesetzt, ${v2.reserved} reserviert.`);
   }
 
   const adminCount = db.prepare('SELECT COUNT(*) as c FROM admin_users').get().c;

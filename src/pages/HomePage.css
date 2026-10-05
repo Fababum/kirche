@@ -15,9 +15,9 @@
   --accent-hover: #88334c;
   --accent-soft: #f8dce0;
   --coral: #eb6264;
-  --text: #29211f;
+  --text: #a35a19;
   --text-h: #a9425f;
-  --text-muted: #57473e;
+  --text-muted: #a35a19;
   --border: #d7b78e;
   --radius-sm: 0px;
   --radius-md: 0px;
@@ -112,7 +112,7 @@
   font-family: var(--font-heading);
   border-radius: 0;
   background: var(--coral);
-  color: #29211f;
+  color: var(--text-h);
   box-shadow: none;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -123,7 +123,7 @@
 
 .home-page .btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: #faebd3;
   transform: none;
 }
 
@@ -195,7 +195,7 @@
 
 .home-page .hero__date-splash {
   margin-top: clamp(12px, 1.2vw, 16px);
-  color: #f5e9d5;
+  color: #faebd3;
   font: 700 clamp(24px, 5vw, 70px)/1.5 var(--font);
   letter-spacing: 0.025em;
   white-space: nowrap;
@@ -208,7 +208,7 @@
   white-space: nowrap;
   letter-spacing: -0.025em;
   text-transform: none;
-  color: #f5e9d5;
+  color: #faebd3;
 }
 
 .home-page .hero__title p {
@@ -219,6 +219,27 @@
   letter-spacing: 0.025em;
   text-wrap: balance;
   margin: clamp(18px, 2.4vw, 32px) 0 0;
+}
+
+/* Anmelde-Button im Titelbild: kräftiges Rot, gross, leicht abgerundet. */
+.home-page .hero__cta {
+  margin-top: clamp(16px, 2vw, 28px);
+  padding: clamp(14px, 1.6vw, 24px) clamp(28px, 3.6vw, 56px);
+  background: #d4372b;
+  color: #faebd3;
+  border-radius: 16px;
+  font-family: var(--font);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: clamp(28px, 4.8vw, 66px);
+  line-height: 1.1;
+  box-shadow: 0 6px 20px rgba(120, 30, 10, 0.3);
+}
+
+.home-page .hero__cta:hover {
+  background: #b82a20;
+  color: #faebd3;
 }
 
 .home-page .hero__discover {

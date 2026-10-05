@@ -13,7 +13,7 @@ const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;
 // (z.B. lokale Entwicklung ohne .env), fällt die Karte automatisch auf die
 // schlichtere, aber garantiert schlüssellose Esri-"World Street Map"-Basemap
 // zurück - so bleibt die Seite auch ohne Key funktionsfähig.
-function LocationMap({ lat, lon, label }) {
+function LocationMap({ lat, lon, label, extraMarkers = [] }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
 
@@ -66,6 +66,15 @@ function LocationMap({ lat, lon, label }) {
       }
 
       L.marker([lat, lon]).addTo(map).bindPopup(label);
+      const points = [[lat, lon]];
+      for (const m of extraMarkers) {
+        const icon = m.badge
+          ? L.divIcon({ className: 'location-map__badge', html: m.badge, iconSize: [30, 30], iconAnchor: [15, 15] })
+          : undefined;
+        L.marker([m.lat, m.lon], icon ? { icon } : undefined).addTo(map).bindPopup(m.label);
+        points.push([m.lat, m.lon]);
+      }
+      if (points.length > 1) map.fitBounds(points, { padding: [40, 40], maxZoom: 16 });
 
       mapRef.current = map;
     });
@@ -77,7 +86,7 @@ function LocationMap({ lat, lon, label }) {
         mapRef.current = null;
       }
     };
-  }, [lat, lon, label]);
+  }, [lat, lon, label, extraMarkers]);
 
   return <div ref={containerRef} className="location-map" role="img" aria-label={label} />;
 }

@@ -22,9 +22,9 @@
   --border: #e3dccd;
   --border-soft: #ece5d7;
 
-  --text: #4a453e;
-  --text-muted: #837a6d;
-  --text-h: #262220;
+  --text: #a35a19;
+  --text-muted: #a35a19;
+  --text-h: #a35a19;
 
   /* Orange - Hauptakzent, aus der Sonnenuntergangs-Illustration abgetastet. */
   --accent: #d8641f;
@@ -223,7 +223,7 @@ a {
 
 .btn--primary {
   background: var(--accent);
-  color: #fff;
+  color: #faebd3;
 }
 
 .btn--primary:hover {
@@ -246,7 +246,7 @@ a {
 
 .btn--secondary {
   background: var(--text-h);
-  color: #fff;
+  color: #faebd3;
 }
 
 .btn--secondary:hover {

@@ -1,11 +1,14 @@
-import { teamContacts, secretariat, eventInfo } from '../data/content';
+import { secretariat, eventInfo } from '../data/content';
 import LocationMap from './LocationMap';
 import './TeamContacts.css';
 
 // Koordinaten des Kirchengebäudes, nicht des Strassenmittelpunkts.
 const CHURCH_LAT = 47.6301075;
 const CHURCH_LON = 8.7263536;
-const HAS_DIGIT = /\d/;
+// Parkplätze an der Langenmooserstrasse (westlich/unterhalb der Kirche).
+const PARKING_MARKERS = [
+  { lat: 47.63040, lon: 8.72490, label: 'Parkplätze (signalisiert), Langenmooserstrasse', badge: 'P' },
+];
 
 function TeamContacts() {
   return (
@@ -20,29 +23,12 @@ function TeamContacts() {
               {eventInfo.location.street}<br />
               {eventInfo.location.zipCity}
             </p>
-            <details className="team-contacts__more">
-              <summary>Weitere Ansprechpersonen</summary>
-              <div className="team-contacts__list">
-                {teamContacts.map((person) => (
-                  <div key={person.name} className="team-contacts__row">
-                    <span className="team-contacts__name">{person.name}</span>
-                    <a href={`mailto:${person.email}`}>{person.email}</a>
-                    {HAS_DIGIT.test(person.phone) ? (
-                      <a href={`tel:${person.phone.replace(/\s/g, '')}`}>{person.phone}</a>
-                    ) : (
-                      <span className="team-contacts__pending">{person.phone}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </details>
           </section>
 
           <section>
             <h3>{secretariat.address.line1}</h3>
             <address>
               {secretariat.address.org}<br />
-              {secretariat.name}<br />
               {secretariat.address.street}, {secretariat.address.zipCity}<br />
               <a href={`mailto:${secretariat.email}`}>{secretariat.email}</a><br />
               <a href={`tel:${secretariat.phone.replace(/\s/g, '')}`}>{secretariat.phone}</a>
@@ -55,6 +41,7 @@ function TeamContacts() {
             lat={CHURCH_LAT}
             lon={CHURCH_LON}
             label={`${eventInfo.location.name}, ${eventInfo.location.street}, ${eventInfo.location.zipCity}`}
+            extraMarkers={PARKING_MARKERS}
           />
           <a
             className="team-contacts__map-link"

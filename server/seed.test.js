@@ -22,22 +22,33 @@ beforeEach((t) => {
 });
 
 test('shared event module exports only the approved browser-safe constants', () => {
-  assert.deepEqual({ ...event }, {
+  const { tourTimesFor, ...constants } = event;
+  assert.equal(typeof tourTimesFor, 'function');
+  assert.deepEqual(tourTimesFor('2027-03-20'), ['10:00', '11:00', '14:00', '15:00', '16:00', '17:00']);
+  assert.deepEqual(constants, {
     EVENT_START_DATE: '2027-03-17', EVENT_END_DATE: '2027-03-28',
-    BOOKING_CUTOFF_HOURS: 48, MIN_TOUR_PARTICIPANTS: 5,
+    BOOKING_CUTOFF_HOURS: 48, MIN_TOUR_PARTICIPANTS: 5, MAX_TOUR_PARTICIPANTS: 12,
     SCHOOL_RESERVED_DATE: '2027-03-17',
     PUBLIC_TOUR_DATES: [
       '2027-03-18', '2027-03-19', '2027-03-20', '2027-03-21',
       '2027-03-25', '2027-03-26', '2027-03-27', '2027-03-28',
     ],
     TOUR_START_TIMES: ['14:00', '15:00', '16:00', '17:00'],
+    EXTRA_TOUR_TIMES: {
+      '2027-03-19': ['19:00', '20:00'], '2027-03-20': ['10:00', '11:00'],
+      '2027-03-26': ['19:00', '20:00'], '2027-03-27': ['10:00', '11:00'],
+    },
+    RESERVED_TOURS: [
+      { date: '2027-03-20', time: '10:00', label: 'Fire mit de Chline Truttikon/Ossingen' },
+      { date: '2027-03-20', time: '11:00', label: 'Fire mit de Chline Truttikon/Ossingen' },
+    ],
   });
 });
 
 for (const timezone of ['UTC', 'Europe/Zurich', 'America/Los_Angeles']) {
   test(`seed creates exactly the approved schedule in host TZ ${timezone}`, () => {
     process.env.TZ = timezone;
-    assert.equal(initializeTours(), 36);
+    assert.equal(initializeTours(), 44);
     assertSchedule();
     assert.equal(initializeTours(), 0);
   });
@@ -45,11 +56,11 @@ for (const timezone of ['UTC', 'Europe/Zurich', 'America/Los_Angeles']) {
 
 test('startup and repeated CLI initialization never restore deleted defaults, including an empty DB', () => {
   runStartupSetup();
-  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM tours').get().count, 36);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM tours').get().count, 44);
   db.prepare('DELETE FROM tours WHERE id = (SELECT MIN(id) FROM tours)').run();
   runStartupSetup();
   assert.equal(initializeTours(), 0);
-  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM tours').get().count, 35);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM tours').get().count, 43);
   db.exec('DELETE FROM tours');
   runStartupSetup();
   assert.equal(initializeTours(), 0);
@@ -71,7 +82,10 @@ test('existing databases adopt baseline without filling gaps or changing legacy 
   runStartupSetup();
   assert.equal(initializeTours(), 0);
   runStartupSetup();
-  assert.deepEqual(db.prepare('SELECT * FROM tours ORDER BY id').all(), tours);
+  // Schedule-v2 adds the 8 extra slots and caps event tours at 12; nothing else changes.
+  tours[1].capacity = 12;
+  assert.deepEqual(db.prepare('SELECT * FROM tours WHERE id <= 2 ORDER BY id').all(), tours);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM tours WHERE id > 2').get().count, 8);
   assert.deepEqual(db.prepare('SELECT * FROM bookings ORDER BY id').all(), bookings);
   db.exec('DELETE FROM bookings; DELETE FROM tours;');
   runStartupSetup();
@@ -83,11 +97,14 @@ function assertSchedule() {
     '2027-03-17', '2027-03-18', '2027-03-19', '2027-03-20', '2027-03-21',
     '2027-03-25', '2027-03-26', '2027-03-27', '2027-03-28',
   ];
-  assert.deepEqual(db.prepare(`SELECT date, time, capacity, booked_count, is_cancelled
+  const reserved = new Set(['2027-03-20 10:00', '2027-03-20 11:00']);
+  assert.deepEqual(db.prepare(`SELECT date, time, capacity, booked_count, is_cancelled, label
     FROM tours ORDER BY date, time`).all(), dates.flatMap((date) =>
-    ['14:00', '15:00', '16:00', '17:00'].map((time) => ({
-      date, time, capacity: date === '2027-03-17' ? 0 : 15,
+    event.tourTimesFor(date).map((time) => ({
+      date, time,
+      capacity: date === '2027-03-17' || reserved.has(`${date} ${time}`) ? 0 : 12,
       booked_count: 0, is_cancelled: 0,
+      label: reserved.has(`${date} ${time}`) ? 'Fire mit de Chline Truttikon/Ossingen' : null,
     }))));
 }
 
@@ -125,7 +142,7 @@ for (const initialized of [false, true]) {
     if (initialized) initializeTours();
     const admins = db.prepare('SELECT * FROM admin_users').all();
     const sequences = Object.fromEntries(db.prepare('SELECT name, seq FROM sqlite_sequence').all().map(({ name, seq }) => [name, seq]));
-    assert.equal(resetTours(), 36);
+    assert.equal(resetTours(), 44);
     assertSchedule();
     assert.equal(db.prepare('SELECT COUNT(*) AS count FROM bookings').get().count, 0);
     assert.equal(db.prepare('SELECT COUNT(*) AS count FROM booking_verification_tokens').get().count, 0);
@@ -162,3 +179,24 @@ for (const initialized of [false, true]) {
     }
   });
 }
+
+test('schedule-v2 migration updates an existing live database once, keeping bookings', async () => {
+  const { migrateScheduleV2 } = await import('./db/seedLogic.js');
+  db.exec(`CREATE TABLE IF NOT EXISTS initialization_flags (key TEXT PRIMARY KEY, initialized_at TEXT NOT NULL DEFAULT (datetime('now')))`);
+  db.prepare("INSERT INTO initialization_flags (key) VALUES ('default-tours-v1')").run();
+  db.exec(`
+    INSERT INTO tours (date, time, capacity, booked_count) VALUES ('2027-03-18', '14:00', 15, 3);
+    INSERT INTO tours (date, time, capacity, booked_count) VALUES ('2027-03-18', '15:00', 15, 14);
+    INSERT INTO tours (date, time, capacity, booked_count) VALUES ('2027-03-20', '10:00', 15, 0);
+  `);
+  const result = migrateScheduleV2();
+  assert.equal(result.added, 7);
+  const rows = Object.fromEntries(db.prepare('SELECT date, time, capacity, label FROM tours').all()
+    .map((r) => [`${r.date} ${r.time}`, r]));
+  assert.equal(rows['2027-03-18 14:00'].capacity, 12);
+  assert.equal(rows['2027-03-18 15:00'].capacity, 14);
+  assert.equal(rows['2027-03-20 10:00'].capacity, 0);
+  assert.equal(rows['2027-03-20 11:00'].label, 'Fire mit de Chline Truttikon/Ossingen');
+  assert.equal(rows['2027-03-26 20:00'].capacity, 12);
+  assert.equal(migrateScheduleV2(), null);
+});

@@ -65,49 +65,6 @@
   font-size: 16px;
 }
 
-.home-page .team-contacts .team-contacts__more {
-  max-width: none;
-  min-width: 0;
-  margin: 32px 0 0;
-  text-align: left;
-  border-top: 1px solid var(--coral);
-}
-
-.home-page .team-contacts__more summary {
-  padding-block: 16px;
-  color: var(--accent);
-  font-size: 20px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.home-page .team-contacts__more summary:hover {
-  text-decoration: underline;
-}
-
-.home-page .team-contacts__list {
-  margin-top: 8px;
-}
-
-.home-page .team-contacts .team-contacts__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px 24px;
-  padding-block: 14px;
-  font-size: 18px;
-  overflow-wrap: anywhere;
-}
-
-.home-page .team-contacts .team-contacts__name {
-  grid-column: auto;
-  color: var(--text-h);
-  font-weight: 600;
-}
-
-.home-page .team-contacts__pending {
-  font-style: italic;
-}
-
 @media (max-width: 700px) {
   .home-page .team-contacts {
     padding-block: 48px;
@@ -117,8 +74,7 @@
     margin-bottom: 32px;
   }
 
-  .home-page .team-contacts__columns,
-  .home-page .team-contacts .team-contacts__row {
+  .home-page .team-contacts__columns {
     grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -3,6 +3,7 @@
 // Alle Routen ausser /login erfordern ein gültiges Admin-Login (Cookie).
 // ============================================================================
 import { Router } from 'express';
+import { MAX_TOUR_PARTICIPANTS } from '../../shared/event.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
@@ -114,6 +115,7 @@ router.get('/tours', (req, res) => {
       bookedCount: t.booked_count,
       pendingCount: t.pending_count,
       isCancelled: !!t.is_cancelled,
+      label: t.label || null,
     }));
   res.json(tours);
 });
@@ -124,7 +126,7 @@ router.post('/tours', (req, res) => {
   if (!date || !time) {
     return res.status(400).json({ error: 'Datum und Uhrzeit erforderlich.' });
   }
-  const cap = capacity === undefined ? 15 : Number(capacity);
+  const cap = capacity === undefined ? MAX_TOUR_PARTICIPANTS : Number(capacity);
   if (!Number.isSafeInteger(cap) || cap < 0) {
     return res.status(400).json({ error: 'Ungültige Kapazität.' });
   }

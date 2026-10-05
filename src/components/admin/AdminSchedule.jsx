@@ -83,7 +83,7 @@ function AdminSchedule() {
   const [exporting, setExporting] = useState(null);
   const exportBusy = useRef(false);
   const [showNewForm, setShowNewForm] = useState(false);
-  const [newTour, setNewTour] = useState({ date: '', time: '', capacity: 15 });
+  const [newTour, setNewTour] = useState({ date: '', time: '', capacity: 12 });
   const [actionError, setActionError] = useState('');
 
   function reload() {
@@ -223,7 +223,7 @@ function AdminSchedule() {
     setActionError('');
     try {
       await api.createTour({ ...newTour, capacity });
-      setNewTour({ date: '', time: '', capacity: 15 });
+      setNewTour({ date: '', time: '', capacity: 12 });
       setShowNewForm(false);
       reload();
     } catch (err) {
@@ -477,7 +477,7 @@ function AdminSchedule() {
                   <span className="admin-schedule__chevron" aria-hidden="true">
                     {isOpen ? '▾' : '▸'}
                   </span>
-                  <span className="admin-schedule__time">{tour.time} Uhr</span>
+                  <span className="admin-schedule__time">{tour.time} Uhr{tour.label ? ` · ${tour.label}` : ''}</span>
                   <span className="admin-schedule__count">
                     {tour.bookedCount} / {tour.capacity} Plätze belegt
                   </span>

@@ -15,6 +15,7 @@ function Hero({ children }) {
           <h1 id="hero-title">{eventInfo.title}</h1>
           <div className="hero__date-splash">{eventInfo.dateRange}</div>
           <p>{eventInfo.claim}</p>
+          <a className="btn btn--primary hero__cta" href="/reservation">Melde dich an!</a>
         </div>
         <a className="hero__discover" href="#entdecken">
           Den Osterweg entdecken
@@ -36,10 +37,10 @@ function Hero({ children }) {
         </section>
         <section className="event-intro" aria-labelledby="intro-title">
           <div className="event-intro__copy">
-            <h2 id="intro-title">Osterweg</h2>
+            <h2 id="intro-title">{eventInfo.introHeading}</h2>
             <p>{eventInfo.intro}</p>
-            <p>Mit-erleben, mit-fühlen und mit-gehen: Entdecke die Hoffnung der Ostergeschichte und erlebe Ostern mit allen Sinnen.</p>
-            <p>Nach dem Rundgang: Zeit für ein Getränk und ein Gespräch im «Kafi i de Chile». Bitte beachte die Öffnungszeiten.</p>
+            <p>{eventInfo.introInvite}</p>
+            <p>{eventInfo.introKafi}</p>
           </div>
           <div className="event-intro__art" aria-hidden="true" />
         </section>

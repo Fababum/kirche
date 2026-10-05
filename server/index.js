@@ -60,16 +60,26 @@ app.use(
   })
 );
 app.use(
-  cors({
-    origin(origin, callback) {
-      // Anfragen ohne Origin-Header (z.B. curl, Server-zu-Server) erlauben.
-      if (!origin || CLIENT_ORIGINS.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Nicht erlaubte Herkunft (CORS): ' + origin));
+  cors((req, callback) => {
+    const origin = req.get('Origin');
+    // Same-Origin: Das Frontend wird von diesem Server selbst ausgeliefert,
+    // Browser senden bei POST/Modul-Skripten trotzdem einen Origin-Header.
+    let sameOrigin = false;
+    if (origin) {
+      try {
+        sameOrigin = new URL(origin).host === req.get('Host');
+      } catch {
+        sameOrigin = false;
       }
-    },
-    credentials: true,
+    }
+    // Anfragen ohne Origin-Header (z.B. curl, Server-zu-Server) erlauben.
+    const allowed = !origin || sameOrigin || CLIENT_ORIGINS.includes(origin);
+    if (!allowed) {
+      const err = new Error('Nicht erlaubte Herkunft (CORS): ' + origin);
+      err.status = 403;
+      return callback(err);
+    }
+    callback(null, { origin: true, credentials: true });
   })
 );
 // Komprimiert Antworten (gzip) - spart Bandbreite/Egress-Kosten, vor allem

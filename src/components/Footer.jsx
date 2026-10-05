@@ -7,7 +7,7 @@ function Footer() {
       <div className="container site-footer__inner">
         <p className="site-footer__brand">{footerInfo.projectBy}</p>
         <p>
-          {footerInfo.org} · {footerInfo.street}, {footerInfo.zipCity}
+          {footerInfo.street}, {footerInfo.zipCity}
           <br />
           <a href={`tel:${footerInfo.phone.replace(/\s/g, '')}`}>{footerInfo.phone}</a>
         </p>

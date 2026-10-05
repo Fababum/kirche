@@ -9,7 +9,7 @@ import Volunteer from './components/Volunteer';
 import TeamContacts from './components/TeamContacts';
 import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
-import SchoolClassContact from './components/SchoolClassContact';
+import SchoolClassContact, { GroupsContact } from './components/SchoolClassContact';
 import ConfirmBooking from './pages/ConfirmBooking';
 import { registrationInfo } from './data/content';
 import './pages/HomePage.css';
@@ -46,6 +46,7 @@ function HomePage() {
               </div>
               <p>{registrationInfo.notice}</p>
               <p><SchoolClassContact /></p>
+              <p><GroupsContact /></p>
               <p>{registrationInfo.accessibility}</p>
               <p className="reservation-intro__deadline">{registrationInfo.deadline}</p>
               <a className="btn btn--primary" href="/reservation">Jetzt anmelden</a>

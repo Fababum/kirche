@@ -9,4 +9,14 @@ function SchoolClassContact() {
   );
 }
 
+// Gleicher Stil wie die Schulklassen-Zeile, mit Link zum Sekretariat.
+export function GroupsContact() {
+  return (
+    <>
+      Ausserhalb der Öffnungszeiten: Gruppen meldet euch beim{' '}
+      <a href={`mailto:${secretariat.email}`}>{secretariat.name}</a>.
+    </>
+  );
+}
+
 export default SchoolClassContact;

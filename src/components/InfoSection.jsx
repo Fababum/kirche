@@ -30,7 +30,10 @@ function InfoSection() {
           rows={tourInfo.schedule}
           description={tourInfo.description}
         />
-        <Schedule title={kafi.name} rows={kafi.hours} />
+        <section className="info-section__block">
+          <h3>{kafi.name}</h3>
+          <p>{kafi.text}</p>
+        </section>
 
         <section className="info-section__block">
           <h3>{costsInfo.heading}</h3>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { registrationInfo, secretariat } from '../data/content';
 import { api } from '../api';
-import { EVENT_START_DATE, EVENT_END_DATE, SCHOOL_RESERVED_DATE } from '../../shared/event.js';
+import { EVENT_START_DATE, EVENT_END_DATE, SCHOOL_RESERVED_DATE, MAX_TOUR_PARTICIPANTS } from '../../shared/event.js';
 import SchoolClassContact from './SchoolClassContact';
 import './Booking.css';
 
@@ -253,6 +253,7 @@ function Booking() {
 
         <div className="booking__rules">
           <p>{registrationInfo.notice}</p>
+          <p>{registrationInfo.groupsHint}</p>
           <p><strong>{registrationInfo.deadline}</strong></p>
           <p>Nach der Anmeldung hast du 30 Minuten Zeit, deine E-Mail-Adresse zu bestätigen. So lange halten wir deine Plätze frei.</p>
         </div>
@@ -319,7 +320,8 @@ function Booking() {
                 >
                   {tour.time} Uhr
                   <span className="booking__slot-spots">
-                    {tour.date === SCHOOL_RESERVED_DATE && tour.isFull ? 'Für Schulklassen reserviert'
+                    {tour.label && tour.isFull ? `${tour.label} · ausgebucht`
+                      : tour.date === SCHOOL_RESERVED_DATE && tour.isFull ? 'Für Schulklassen reserviert'
                       : isClosed(tour) ? 'Anmeldeschluss erreicht' : tour.isFull ? 'ausgebucht' : `${tour.freeSpots} Plätze frei`}
                   </span>
                 </button>
@@ -374,12 +376,12 @@ function Booking() {
                 />
               </label>
               <label>
-                Anzahl Personen *
+                Anzahl Personen * (max. {MAX_TOUR_PARTICIPANTS})
                 <input
                   required
                   type="number"
                   min={1}
-                  max={selectedTour.freeSpots}
+                  max={Math.min(selectedTour.freeSpots, MAX_TOUR_PARTICIPANTS)}
                   value={form.groupSize}
                   onChange={(e) => setForm({ ...form, groupSize: e.target.value })}
                 />
