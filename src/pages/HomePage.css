@@ -234,7 +234,7 @@
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0.01em;
-  font-size: clamp(28px, min(4.8vw, 6vh), 66px);
+  font-size: clamp(24px, min(4vw, 5vh), 54px);
   line-height: 1.1;
   box-shadow: 0 6px 20px rgba(120, 30, 10, 0.3);
 }

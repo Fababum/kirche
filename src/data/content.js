@@ -133,7 +133,7 @@ export const volunteerAreas = [
     key: "gebets-team",
     title: "Gebets-Team",
     period: "",
-    description: "Wir bauen ein Gebetsteam auf, das das gesamte Projekt im Gebet mitträgt und dafür betet, dass alles reibungslos klappt und Menschen berührt werden. Möchtest du mitbeten? Egal ob regelmässig oder punktuell: Deine Unterstützung zählt! Melde dich, wenn du dabei sein möchtest. Das Gebetsteam trifft sich alle 14 Tage, dienstags jeweils um 19.00 Uhr in der Kirche Truttikon. Termine siehe auf der Homepage der ref. Kirche Weinland Mitte → Gemeindegebet.",
+    description: "Das Gebetsteam trägt das gesamte Projekt im Gebet und betet dafür, dass alles reibungslos abläuft und Menschen durch den Osterweg berührt werden. Komm vorbei und unterstütze uns im Gebet! Wir treffen uns alle 14 Tage, dienstags um 19.00 Uhr in der Kirche Truttikon. Termine siehe auf der Homepage der ref. Kirche Weinland Mitte → Gemeindegebet.",
     contacts: [],
   },
 ];

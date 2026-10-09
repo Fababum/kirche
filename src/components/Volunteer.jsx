@@ -18,11 +18,9 @@ function Volunteer() {
               <h3>{area.title}</h3>
               {area.period && <span className="badge">{area.period}</span>}
               <p>{area.description}</p>
+              {area.contacts.length > 0 && (
               <div className="volunteer__contact">
                 <span>Kontakt</span>
-                {area.contacts.length === 0 && (
-                  <span className="volunteer__contact-pending">Kontakt folgt</span>
-                )}
                 {area.contacts.map((contact) => (
                   <div key={contact.name} className="volunteer__contact-person">
                     <strong>{contact.name}</strong>
@@ -35,6 +33,7 @@ function Volunteer() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           ))}
         </div>
