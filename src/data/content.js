@@ -88,7 +88,7 @@ export const volunteerAreas = [
     key: "guide",
     title: "Guide",
     period: "Schulungen ab Januar 2027",
-    description: "Magst du es, die Ostergeschichte freudig und mit Begeisterung anderen weiterzuerzählen? Dann bist du hier genau richtig! Ausgerüstet mit einem Tablet führst du die Besucher durch den Rundgang des Osterwegs. Mehr dazu erfährst du an einer kurzen Schulung ab Januar 2027. Probelauf für Guides: 13./14. März 2027.",
+    description: "Magst du die Ostergeschichte freudig und mit Begeisterung anderen weitererzählen? Dann bist du hier genau richtig! Ausgerüstet mit einem Tablet führst du die Besucher durch den Rundgang des Osterwegs. Mehr dazu erfährst du an einer kurzen Schulung ab Januar 2027. Probelauf für Guides: 13./14. März 2027.",
     contacts: [
       { name: "Thomas Guler", phone: "079 605 23 50", email: "thomas.guler@kirche-wm.ch" },
     ],
