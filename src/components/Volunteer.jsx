@@ -18,6 +18,20 @@ function Volunteer() {
               <h3>{area.title}</h3>
               {area.period && <span className="badge">{area.period}</span>}
               <p>{area.description}</p>
+              {area.note && (
+                <p>
+                  {area.note}
+                  {area.noteLink && (
+                    <>
+                      {' '}
+                      <a href={area.noteLink.href} target="_blank" rel="noreferrer">
+                        {area.noteLink.label}
+                      </a>
+                      .
+                    </>
+                  )}
+                </p>
+              )}
               {area.contacts.length > 0 && (
               <div className="volunteer__contact">
                 <span>Kontakt</span>
