@@ -186,7 +186,7 @@
 .home-page .hero__title {
   position: absolute;
   z-index: 1;
-  top: 43%;
+  top: 48%;
   left: 5%;
   right: 5%;
   text-align: center;
@@ -196,7 +196,7 @@
 .home-page .hero__date-splash {
   margin-top: clamp(12px, 1.2vw, 16px);
   color: #faebd3;
-  font: 700 clamp(24px, 5vw, 70px)/1.5 var(--font);
+  font: 700 clamp(24px, min(5vw, 6.5vh), 70px)/1.5 var(--font);
   letter-spacing: 0.025em;
   white-space: nowrap;
 }
@@ -204,7 +204,9 @@
 .home-page .hero h1 {
   max-width: none;
   margin: 0;
-  font: 700 clamp(24px, 8.5vw, 120px)/1.08 var(--font-heading);
+  /* Auch an der Höhe begrenzen, damit der Titel auf breiten, niedrigen
+     Desktop-Bildschirmen nicht ins Logo oben links ragt. */
+  font: 700 clamp(24px, min(8.5vw, 11vh), 120px)/1.08 var(--font-heading);
   white-space: nowrap;
   letter-spacing: -0.025em;
   text-transform: none;
@@ -232,7 +234,7 @@
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0.01em;
-  font-size: clamp(28px, 4.8vw, 66px);
+  font-size: clamp(28px, min(4.8vw, 6vh), 66px);
   line-height: 1.1;
   box-shadow: 0 6px 20px rgba(120, 30, 10, 0.3);
 }

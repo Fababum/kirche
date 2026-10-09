@@ -26,7 +26,7 @@ export const eventInfo = {
   },
   claim: "Ostern erleben mit allen Sinnen",
   introHeading: "Tauche ein in eine andere Zeit!",
-  intro: "Ein Guide nimmt dich mit auf eine Zeitreise ins Ostergeschehen vor 2000 Jahren. Erlebe, fühle und gehe den Weg aktiv mit und entdecke die Hoffnung, die darin steckt.",
+  intro: "Ein Guide nimmt dich mit auf eine Zeitreise ins biblische Ostergeschehen vor 2000 Jahren. Erlebe, fühle und gehe den Weg aktiv mit und entdecke die Hoffnung, die darin steckt.",
   introInvite: "Komm vorbei: ob allein, mit der Familie, in der Gruppe oder mit der Schul- und Untiklasse.",
   introKafi: "Nach dem Rundgang: Zeit für ein Getränk und Begegnung im «Kafi i de Chile». Das Kafi ist während der Führungszeiten geöffnet.",
 };
@@ -88,7 +88,7 @@ export const volunteerAreas = [
     key: "guide",
     title: "Guide",
     period: "Schulungen ab Januar 2027",
-    description: "Führe Besucher durch den Osterweg. Bist du aufgeschlossen und hast Freude daran, andere mitzunehmen? Vorab wirst du geschult und erhältst ein fertiges Manuskript für deine Tour. Über ein Tablet steuerst du ganz einfach die passenden Effekte und Einspielfilme. Die Termine für die Schulung erfährst du rechtzeitig. Probelauf für Guides am 13./14. März 2027.",
+    description: "Magst du es, die Ostergeschichte freudig und mit Begeisterung anderen weiterzuerzählen? Dann bist du hier genau richtig! Ausgerüstet mit einem Tablet führst du die Besucher durch den Rundgang des Osterwegs. Mehr dazu erfährst du an einer kurzen Schulung ab Januar 2027. Probelauf für Guides: 13./14. März 2027.",
     contacts: [
       { name: "Thomas Guler", phone: "079 605 23 50", email: "thomas.guler@kirche-wm.ch" },
     ],
@@ -106,7 +106,7 @@ export const volunteerAreas = [
     key: "gastgeber",
     title: "Gastgeber / Host",
     period: "17.-28. März 2027",
-    description: "Nach jeder Führung machst du einen Rundgang durch die Räumlichkeiten und richtest alles wieder für die neue Gruppe her. Diese Tätigkeit hat eine bedeutende Wirkung.",
+    description: "Nach jeder Führung machst du einen Rundgang durch die Räumlichkeiten und richtest alles wieder für die neue Gruppe her. Diese Aufgabe ist besonders wichtig!",
     contacts: [
       { name: "Thomas Guler", phone: "079 605 23 50", email: "thomas.guler@kirche-wm.ch" },
     ],
@@ -115,7 +115,7 @@ export const volunteerAreas = [
     key: "aufbau",
     title: "Aufbau + Dekoration",
     period: "8.-12. März 2027",
-    description: "Wir suchen helfende Hände für die Montage und Aufbau der Ausstellungsmodule sowie das Verlegen von Kabeln und Installieren von Licht- und Tontechnik.",
+    description: "Wir suchen helfende Hände für die Montage und den Aufbau der Ausstellungsmodule und die Dekos.",
     contacts: [
       { name: "Anita Spengler und Beat Graf", phone: "079 850 67 68", email: "beat.graf@kirche-wm.ch" },
     ],
@@ -124,7 +124,7 @@ export const volunteerAreas = [
     key: "abbau",
     title: "Abbau",
     period: "29. März 2027 (Ostermontag)",
-    description: "Nach dem Osterweg muss alles zurückgebaut und verstaut werden. Auch hier brauchen wir ein paar Hände, die mitanpacken, zurückbringen, einpacken und einlagern. Bist du praktisch veranlagt?",
+    description: "Nach dem Osterweg muss alles zurückgebaut und verstaut werden. Hier brauchen wir ein paar geschickte Hände, die bereit sind mitanzupacken!",
     contacts: [
       { name: "Anita Spengler und Beat Graf", phone: "079 850 67 68", email: "beat.graf@kirche-wm.ch" },
     ],
@@ -133,7 +133,7 @@ export const volunteerAreas = [
     key: "gebets-team",
     title: "Gebets-Team",
     period: "",
-    description: "Wir bauen ein Gebetsteam auf, das das gesamte Projekt im Gebet mitträgt, damit alles reibungslos klappt und Menschen berührt werden. Möchtest du mitbeten? Egal ob regelmässig oder flexibel: Deine Unterstützung zählt! Melde dich, wenn du dabei sein möchtest.",
+    description: "Wir bauen ein Gebetsteam auf, das das gesamte Projekt im Gebet mitträgt und dafür betet, dass alles reibungslos klappt und Menschen berührt werden. Möchtest du mitbeten? Egal ob regelmässig oder punktuell: Deine Unterstützung zählt! Melde dich, wenn du dabei sein möchtest. Das Gebetsteam trifft sich alle 14 Tage, dienstags jeweils um 19.00 Uhr in der Kirche Truttikon. Termine siehe auf der Homepage der ref. Kirche Weinland Mitte → Gemeindegebet.",
     contacts: [],
   },
 ];
@@ -141,7 +141,7 @@ export const volunteerAreas = [
 export const downloadSection = {
   heading: "Werbematerial",
   title: "Flyer herunterladen",
-  text: "Flyer, Plakat und Banner. Weitergeben und Veröffentlichen.",
+  text: "Flyer, Plakat und Banner zum Weitergeben und Veröffentlichen.",
   linkHref: "/downloads/osterweg_wyland_flyer.zip",
   linkLabel: "Flyer herunterladen",
 };
